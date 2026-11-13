@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Use cases, DTOs, port interfaces and validators. It must not depend on ASP.NET Core or EF Core. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\PlatformService.Domain\PlatformService.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PlatformService.UnitTests" />
+  </ItemGroup>
+
+</Project>

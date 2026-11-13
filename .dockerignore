@@ -1,0 +1,14 @@
+# Only src/ and the root MSBuild files are needed to build the image.
+**/bin/
+**/obj/
+**/TestResults/
+tests/
+.git/
+.vs/
+.vscode/
+.idea/
+**/*.user
+*.md
+Dockerfile
+.dockerignore
+.gitignore
