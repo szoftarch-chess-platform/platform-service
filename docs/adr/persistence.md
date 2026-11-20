@@ -9,8 +9,8 @@
 - `AddInfrastructure` sets up `UseNpgsql` with `ConnectionStrings:Platform` and `UseSnakeCaseNamingConvention`, and it adds `AddDbContextCheck<PlatformDbContext>` with the `ready` tag. The Api knows only the tag, and the DbContext is internal.
 - `ConnectionStrings:Platform` is read through options with `ValidateOnStart`, so configuration that `WebApplicationFactory` adds later still applies. If the database is down, the app still starts.
 - Each aggregate gets one repository interface in the Application, implemented in the Infrastructure. The `PlatformDbContext` is the Unit of Work. There is no generic repository. Repositories have no code yet, because there is no entity.
+- **Migrations:** the `Dockerfile` builds an EF Core migration bundle into the image next to the service. The compose of the infra repo runs the bundle in a one-shot container of the same image before the service starts, as ADR-5 decides. The service does not migrate at startup.
 
 ## Open questions
 
-- The entities, the first migration and the migration strategy, which is either `MigrateAsync` at startup or a migration bundle. A bundle would run as a separate one-shot container in the compose of the infra repo.
 - Where the UUID v7 is generated, in the application or with the PostgreSQL function `uuidv7()`. The byte order of `Guid.CreateVersion7` in .NET is debated, so with the first entity check that the ids are stored in time order in a `uuid` column.
