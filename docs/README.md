@@ -29,10 +29,8 @@
 - The name of the dead-letter queue and the delivery limit (ADR-6), within the `platform.` prefix.
 ## Next steps
 
-- Write enums as camelCase strings and leave out `null` values, as PS-ADR-2 says.
 - Add Identity as PS-ADR-11 describes, with the first migration.
 - Build the migration bundle into the image, and add its one-shot container to the compose of the infra repo (ADR-5, PS-ADR-7).
 - Implement registration, sign-in, refresh and sign-out as the contract `platform-service.openapi.yaml` of the infra repo describes, with the cookies and the rotating refresh tokens of ADR-4, the signing key from `Jwt:SigningKeyPath`, and the exemption of the auth endpoints in the OpenAPI transformer (PS-ADR-2).
 - Consume `game.finished.v1` of the contract `game-events.asyncapi.yaml` from the `platform.game-finished` quorum queue with the binding, the idempotency and the dead-letter queue of ADR-6. Test it with the examples of the contract sent through `rabbitmqadmin` (ADR-7). Describe in the README how the service connects locally to the RabbitMQ of the infra compose (ADR-6).
 - Implement the history endpoints of the contract on the stored games (F-6).
-- Add the CI workflow of ADR-2.
