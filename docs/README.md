@@ -27,7 +27,6 @@
 - The RabbitMQ client. It has to read the envelope of ADR-6 as plain JSON and acknowledge only after the commit.
 - How the finished games are stored, for example with the moves in a JSONB column (ADR-5), and whether the service keeps more than the last 100 games of a user (NF-3).
 - The name of the dead-letter queue and the delivery limit (ADR-6), within the `platform.` prefix.
-
 ## Next steps
 
 - Write enums as camelCase strings and leave out `null` values, as PS-ADR-2 says.

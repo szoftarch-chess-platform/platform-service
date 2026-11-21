@@ -5,7 +5,8 @@ ASP.NET Core service of the online chess platform. Its responsibilities are deci
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- Docker for the local PostgreSQL and for building the image
+- Docker for building the image
+- The infra repo in the sibling folder, set up as its README describes
 
 ## Configuration
 
@@ -19,37 +20,34 @@ Settings come from `appsettings.json` and environment variables, where every `:`
 
 ## Running locally
 
-Start PostgreSQL. The network is only needed to run the Docker image as described under [Docker](#docker).
+The service uses the PostgreSQL of the infra compose. Start it in the infra folder.
 
 ```bash
-docker network create platform-dev
-docker run -d --name platform-postgres --network platform-dev -p 5432:5432 \
-  -e POSTGRES_USER=platform -e POSTGRES_PASSWORD=platform -e POSTGRES_DB=platform \
-  postgres:18-alpine
+docker compose up -d --wait postgres
 ```
 
-Set the connection string once, then run the service on http://localhost:5080.
+Set the connection string once with the password `PLATFORM_DB_PASSWORD` of the `.env` of the infra repo, then run the service on http://localhost:8080.
 
 ```bash
-dotnet user-secrets set "ConnectionStrings:Platform" \
-  "Host=localhost;Port=5432;Database=platform;Username=platform;Password=platform" \
-  --project src/PlatformService.Api
+dotnet user-secrets set "ConnectionStrings:Platform" "Host=localhost;Port=5432;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>" --project src/PlatformService.Api
 dotnet run --project src/PlatformService.Api
 ```
 
-There is no gateway locally, so send the identity headers yourself. In Windows PowerShell use `curl.exe`.
+On Linux add `--urls "http://localhost:8080;http://172.17.0.1:8080"` to `dotnet run` when the gateway has to reach the service, with the address of the Docker bridge that the README of the infra repo describes.
+
+To reach the service through the gateway at https://localhost:8443, add `compose.platform-on-host.yaml` to the compose files, as the README of the infra repo describes for a service on the host.
+
+Without the gateway send the identity headers yourself. In Windows PowerShell use `curl.exe`.
 
 ```bash
-curl -i http://localhost:5080/api/users/me \
-  -H "x-user-id: 0193c2b4-7d3e-7c2a-9f1e-3b5a6c7d8e9f" \
-  -H "x-user-name: alice"
+curl -i http://localhost:8080/api/users/me -H "x-user-id: 0193c2b4-7d3e-7c2a-9f1e-3b5a6c7d8e9f" -H "x-user-name: alice"
 # 200 {"id":"0193c2b4-7d3e-7c2a-9f1e-3b5a6c7d8e9f","userName":"alice"}
 
-curl -i http://localhost:5080/api/users/me
+curl -i http://localhost:8080/api/users/me
 # 401 application/problem+json
 ```
 
-In Development the API reference is at http://localhost:5080/scalar. Its authentication panel has a field for both headers. The endpoints are decided in [PS-ADR-2](docs/adr/http-api.md), and the error responses in [PS-ADR-5](docs/adr/error-handling.md).
+In Development the API reference is at http://localhost:8080/scalar. Its authentication panel has a field for both headers. The endpoints are decided in [PS-ADR-2](docs/adr/http-api.md), and the error responses in [PS-ADR-5](docs/adr/error-handling.md).
 
 ## Tests
 
@@ -68,10 +66,8 @@ docker build -t platform-service .
 # Image for both amd64 and arm64
 docker buildx build --platform linux/amd64,linux/arm64 -t platform-service .
 
-# Run it next to the local PostgreSQL from Running locally
-docker run --rm --network platform-dev -p 8081:8080 \
-  -e "ConnectionStrings__Platform=Host=platform-postgres;Database=platform;Username=platform;Password=platform;GSS Encryption Mode=Disable" \
-  platform-service
+# Run it on the database network of the infra compose, next to its PostgreSQL
+docker run --rm --network chess-platform_postgres -p 127.0.0.1:8081:8080 -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" platform-service
 curl -i http://localhost:8081/health/live
 ```
 
