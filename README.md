@@ -73,6 +73,17 @@ curl -i http://localhost:8081/health/live
 
 [PS-ADR-9](docs/adr/container-image.md) describes the image and the `GSS Encryption Mode=Disable` part of the connection string.
 
+## CI
+
+The workflow in `.github/workflows/platform-service.yml` restores, builds and tests every pull request and every push to `dev` and `main`, and it builds the image. For a tag such as `v1.0.0` it also publishes the image for amd64 and arm64 as `ghcr.io/szoftarch-chess-platform/platform-service:1.0.0`.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+After its first publication the package can be private. Make it public once in the package settings on GitHub.
+
 ## File structure
 
 ```
@@ -83,6 +94,7 @@ platform-service/
 ├── Directory.Packages.props     # versions of every package
 ├── .editorconfig, .gitignore, .dockerignore
 ├── Dockerfile                   # container image
+├── .github/workflows/           # CI workflow
 ├── docs/                        # decisions and diagrams of the service
 ├── src/
 │   ├── PlatformService.Api/                  # presentation and composition root

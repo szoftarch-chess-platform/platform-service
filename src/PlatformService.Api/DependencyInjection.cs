@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -47,14 +48,24 @@ public static class DependencyInjection
         // Content rules live in FluentValidation validators. The automatic 400 response of ApiController
         // only covers binding and format errors, such as malformed JSON or a wrong type.
         services.AddControllers(options => options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true)
-            .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+            .AddJsonOptions(options => ApplyJsonConventions(options.JsonSerializerOptions));
 
         // Used outside MVC, for example for the ProblemDetails of the exception handler and the status code pages.
-        services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+        services.ConfigureHttpJsonOptions(options => ApplyJsonConventions(options.SerializerOptions));
 
         services.AddOpenApi(options => options.AddDocumentTransformer<GatewayIdentitySecuritySchemeTransformer>());
 
         return services;
+    }
+
+    /// <summary>
+    /// The JSON conventions of ADR-8. Enums are camelCase strings and are never read from numbers,
+    /// and a property without a value is left out instead of being written as null.
+    /// </summary>
+    private static void ApplyJsonConventions(JsonSerializerOptions options)
+    {
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     }
 
     /// <summary>
