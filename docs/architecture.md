@@ -11,7 +11,7 @@ flowchart TD
     Api["<b>PlatformService.Api</b><br/>controllers, HTTP pipeline,<br/>composition root"]
     App["<b>PlatformService.Application</b><br/>use cases, DTOs, ports, validators"]
     Dom["<b>PlatformService.Domain</b><br/>entities, domain rules"]
-    Infra["<b>PlatformService.Infrastructure</b><br/>EF Core, port implementations"]
+    Infra["<b>PlatformService.Infrastructure</b><br/>EF Core, Identity,<br/>port implementations"]
     Pg[("PostgreSQL")]
 
     Api --> App

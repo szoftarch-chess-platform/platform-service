@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- EF Core and the implementations of the Application's ports. -->
+  <!-- EF Core, the accounts of ASP.NET Core Identity and the implementations of the Application's ports. -->
 
   <ItemGroup>
     <ProjectReference Include="..\PlatformService.Application\PlatformService.Application.csproj" />
@@ -10,6 +10,13 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <!-- Only the EF Core tools and the migration bundle use it, so it does not flow into the Api and its image. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PlatformService.IntegrationTests" />
   </ItemGroup>
 
 </Project>

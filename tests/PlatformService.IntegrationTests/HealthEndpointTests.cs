@@ -13,4 +13,14 @@ public sealed class HealthEndpointTests(PlatformApiFactory factory) : IClassFixt
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Ready_WithTheDatabaseUp_Returns200()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }

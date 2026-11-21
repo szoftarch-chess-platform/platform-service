@@ -8,7 +8,7 @@ ADR-4 decides the tokens and the rules of the accounts, and NF-1 requires that t
 
 ## Decision
 
-- The accounts use ASP.NET Core Identity through `AddIdentityCore` and its EF Core stores in the database of the service. The package is `Microsoft.AspNetCore.Identity.EntityFrameworkCore` in the Infrastructure.
+- The accounts use ASP.NET Core Identity through `AddIdentityCore` and its EF Core stores in the database of the service. The package is `Microsoft.AspNetCore.Identity.EntityFrameworkCore` in the Infrastructure. The DbContext derives from `IdentityUserContext`, because the service has no roles.
 - The user type of Identity and `UserManager` stay in the Infrastructure, and the Application reaches them through a port, as PS-ADR-1 requires.
 - The key of the user type is a `Guid`, which holds the UUID v7 of ADR-4.
 - The options of Identity follow ADR-4. The user name may contain letters, digits, `_` and `-`, the email address is unique, and the password needs 8 characters without composition rules. The validators of PS-ADR-6 check the other limits of length.
@@ -33,7 +33,7 @@ ADR-4 decides the tokens and the rules of the accounts, and NF-1 requires that t
 
 - The defaults of Identity differ from ADR-4. They require 6 characters with a digit, a lowercase letter, an uppercase letter and a symbol, and they allow `.`, `@` and `+` in user names. So every option is set explicitly.
 - The model of Identity has a unique index on the normalized user name, but the index on the normalized email is not unique. The entity configuration makes it unique, so two parallel registrations cannot take the same address.
-- The tables of Identity come with the first migration and get the snake case names of PS-ADR-7.
+- The tables of Identity come with the first migration as `users`, `user_claims`, `user_logins` and `user_tokens`. Identity names them and their indexes explicitly, so the entity configurations give them the snake case names of PS-ADR-7.
 
 ## Open questions
 
