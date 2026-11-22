@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- EF Core, the accounts of ASP.NET Core Identity and the implementations of the Application's ports. -->
+  <!-- EF Core, the accounts of ASP.NET Core Identity, the access tokens and the implementations of the Application's ports. -->
 
   <ItemGroup>
     <ProjectReference Include="..\PlatformService.Application\PlatformService.Application.csproj" />
@@ -11,6 +11,7 @@
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <!-- Only the EF Core tools and the migration bundle use it, so it does not flow into the Api and its image. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>

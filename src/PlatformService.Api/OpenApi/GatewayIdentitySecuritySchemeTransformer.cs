@@ -35,7 +35,7 @@ internal sealed class GatewayIdentitySecuritySchemeTransformer : IOpenApiDocumen
             Description = "The user's user name. The gateway sets it from the JWT.",
         };
 
-        // Both headers are required together. Every endpoint in the document needs them for now.
+        // Both headers are required together, except where AllowAnonymousSecurityTransformer exempts an operation.
         document.Security ??= [];
         document.Security.Add(new OpenApiSecurityRequirement
         {

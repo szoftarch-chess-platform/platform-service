@@ -15,6 +15,7 @@ Settings come from `appsettings.json` and environment variables, where every `:`
 | Setting | Environment variable | Required | Description |
 |---|---|---|---|
 | `ConnectionStrings:Platform` | `ConnectionStrings__Platform` | yes | Npgsql connection string of the database of the service |
+| `Jwt:SigningKeyPath` | `Jwt__SigningKeyPath` | yes | Path of the PEM file with the private key that signs the access tokens. The `dev-setup.mjs` script of the infra repo creates it as `secrets/jwt/private-key.pem`. |
 | `ForwardedHeaders:KnownNetworks` | `ForwardedHeaders__KnownNetworks__0`, `__1` and so on | yes, set in `appsettings.json` | CIDR ranges that may send `X-Forwarded-For` and `X-Forwarded-Proto`. Environment variables override the entries of `appsettings.json` by index, and entries with a higher index stay. |
 | `ASPNETCORE_ENVIRONMENT` | | no | `Development` turns on the development features that PS-ADR-2, PS-ADR-5 and PS-ADR-8 describe |
 
@@ -26,10 +27,11 @@ The service uses the PostgreSQL of the infra compose. Start it in the infra fold
 docker compose up -d --wait postgres
 ```
 
-Set the connection string once with the password `PLATFORM_DB_PASSWORD` of the `.env` of the infra repo, apply the migrations as the Migrations section describes, then run the service on http://localhost:8080.
+Set the connection string once with the password `PLATFORM_DB_PASSWORD` of the `.env` of the infra repo, and the absolute path of the signing key in the `secrets` folder of the infra repo. Apply the migrations as the Migrations section describes, then run the service on http://localhost:8080.
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:Platform" "Host=localhost;Port=5432;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>" --project src/PlatformService.Api
+dotnet user-secrets set "Jwt:SigningKeyPath" "<infra folder>/secrets/jwt/private-key.pem" --project src/PlatformService.Api
 dotnet run --project src/PlatformService.Api
 ```
 
@@ -88,8 +90,12 @@ docker build -t platform-service .
 # Image for both amd64 and arm64
 docker buildx build --platform linux/amd64,linux/arm64 -t platform-service .
 
-# Run it on the database network of the infra compose, next to its PostgreSQL
-docker run --rm --network chess-platform_postgres -p 127.0.0.1:8081:8080 -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" platform-service
+# Run it on the database network of the infra compose, next to its PostgreSQL, with the signing key of the infra repo
+docker run --rm --network chess-platform_postgres -p 127.0.0.1:8081:8080 \
+  --mount type=bind,source=<infra folder>/secrets/jwt/private-key.pem,target=/run/secrets/jwt-signing-key.pem,readonly \
+  -e Jwt__SigningKeyPath=/run/secrets/jwt-signing-key.pem \
+  -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" \
+  platform-service
 curl -i http://localhost:8081/health/live
 
 # Apply the migrations with the bundle of the image
@@ -126,7 +132,7 @@ platform-service/
 │   ├── PlatformService.Api/                  # presentation and composition root
 │   │   ├── Program.cs                        # DI calls and the middleware order
 │   │   ├── DependencyInjection.cs            # AddPresentation
-│   │   ├── Authentication/                   # Gateway scheme and the ICurrentUser implementation
+│   │   ├── Authentication/                   # Gateway scheme, the ICurrentUser implementation and the token cookies
 │   │   ├── Controllers/                      # API controllers
 │   │   ├── Correlation/                      # correlation id in the logging scope
 │   │   ├── ErrorHandling/                    # exceptions to ProblemDetails
@@ -136,17 +142,20 @@ platform-service/
 │   ├── PlatformService.Application/          # use cases, DTOs, ports and validators
 │   │   ├── DependencyInjection.cs            # AddApplication
 │   │   ├── Abstractions/                     # ports
+│   │   ├── Auth/                             # use cases of registration and sign-in
 │   │   ├── Common/Exceptions/                # exceptions that become error responses
 │   │   └── Users/                            # use cases of the users
 │   ├── PlatformService.Domain/               # entities and domain rules
-│   └── PlatformService.Infrastructure/       # EF Core, Identity and the port implementations
+│   │   └── Sessions/                         # sessions and their refresh tokens
+│   └── PlatformService.Infrastructure/       # EF Core, Identity, the access tokens and the port implementations
 │       ├── DependencyInjection.cs            # AddInfrastructure
 │       ├── HealthCheckTags.cs                # tags of the health checks
-│       ├── Identity/                         # user type of Identity
-│       └── Persistence/                      # DbContext, entity configurations and their options
-│           └── Migrations/                   # EF Core migrations
+│       ├── Identity/                         # user type, store and accounts of Identity
+│       ├── Persistence/                      # DbContext, Unit of Work, repositories, entity configurations and their options
+│       │   └── Migrations/                   # EF Core migrations
+│       └── Tokens/                           # signing of the access tokens and its key
 └── tests/
-    ├── PlatformService.UnitTests/            # tests of the Application logic
+    ├── PlatformService.UnitTests/            # tests of the Domain and the Application logic
     └── PlatformService.IntegrationTests/     # tests of the whole app in memory against PostgreSQL
 ```
 

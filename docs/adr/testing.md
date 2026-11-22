@@ -1,6 +1,6 @@
 # PS-ADR-10: Tests with xUnit v3, hand-written fakes and Testcontainers
 
-**Related:** [PS-ADR-1](clean-architecture.md), [PS-ADR-5](error-handling.md), [PS-ADR-7](persistence.md), [PS-ADR-11](accounts.md)
+**Related:** [PS-ADR-1](clean-architecture.md), [PS-ADR-5](error-handling.md), [PS-ADR-7](persistence.md), [PS-ADR-11](accounts.md), [PS-ADR-12](tokens-and-sessions.md)
 
 ## Context
 
@@ -10,9 +10,10 @@ The Application logic and the HTTP behavior of the service need automated tests.
 
 - The tests use xUnit v3. `dotnet test` runs them on Microsoft Testing Platform, which the `test.runner` setting of `global.json` selects.
 - The test projects use only `xunit.v3`, `Microsoft.AspNetCore.Mvc.Testing` and `Testcontainers.PostgreSql`. There is no assertion or mocking library, only the xUnit `Assert` and hand-written fakes. Pass `TestContext.Current.CancellationToken` to async calls, as the xUnit analyzer asks.
-- `UnitTests` cover the Application logic, for example `UserService` with a fake `ICurrentUser`. They need no Docker.
-- `IntegrationTests` run the whole app in memory with `WebApplicationFactory<Program>` in the `Testing` environment. They cover authentication, health, the JSON conventions, the mapping of exceptions to ProblemDetails and the storage in PostgreSQL. The test project adds its own controllers as an ApplicationPart. The `ErrorTestController` throws each mapped exception, and the `JsonTestController` answers with an enum and a property without a value.
+- `UnitTests` cover the Domain and the Application logic, for example `AuthService` with fakes of its ports. They need no Docker.
+- `IntegrationTests` run the whole app in memory with `WebApplicationFactory<Program>` in the `Testing` environment. They cover authentication, health, the JSON conventions, the mapping of exceptions to ProblemDetails, the storage in PostgreSQL, and the auth endpoints with their tokens and cookies. The test project adds its own controllers as an ApplicationPart. The `ErrorTestController` throws each mapped exception, and the `JsonTestController` answers with an enum and a property without a value.
 - An assembly fixture starts one PostgreSQL container for the integration tests with Testcontainers, from the image of the infra compose, and applies the migrations of PS-ADR-7. The tests share the database, so each one creates its own data with new names.
+- The service does not start without its signing key (PS-ADR-12), so an assembly fixture writes a new P-256 key to a temporary file for the integration tests.
 
 ## Rationale
 

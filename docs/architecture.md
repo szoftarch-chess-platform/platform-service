@@ -11,7 +11,7 @@ flowchart TD
     Api["<b>PlatformService.Api</b><br/>controllers, HTTP pipeline,<br/>composition root"]
     App["<b>PlatformService.Application</b><br/>use cases, DTOs, ports, validators"]
     Dom["<b>PlatformService.Domain</b><br/>entities, domain rules"]
-    Infra["<b>PlatformService.Infrastructure</b><br/>EF Core, Identity,<br/>port implementations"]
+    Infra["<b>PlatformService.Infrastructure</b><br/>EF Core, Identity, access tokens,<br/>port implementations"]
     Pg[("PostgreSQL")]
 
     Api --> App
@@ -63,22 +63,33 @@ sequenceDiagram
     end
 ```
 
-## Planned write path
+## Registration
 
-The path of the later use cases that change data. It is not implemented yet.
+How `POST /api/auth/register` of [PS-ADR-2](adr/http-api.md) creates the account of [PS-ADR-11](adr/accounts.md) and its session of [PS-ADR-12](adr/tokens-and-sessions.md), and saves both in the one commit of [PS-ADR-7](adr/persistence.md). Sign-in takes the same path with `FindByCredentialsAsync` instead of `CreateAsync`.
 
 ```mermaid
 sequenceDiagram
-    participant Svc as Service
+    participant Envoy
+    participant Ctrl as AuthController
+    participant Svc as AuthService
     participant Val as Validator
-    participant Dom as Domain
-    participant Repo as Repository
-    participant Db as DbContext
+    participant Acc as IUserAccounts
+    participant Ses as Session
+    participant Repo as ISessionRepository
+    participant Tok as IAccessTokenIssuer
+    participant Uow as IUnitOfWork
     participant Pg as PostgreSQL
 
+    Envoy->>Ctrl: POST /api/auth/register
+    Ctrl->>Svc: RegisterAsync
     Svc->>Val: ValidateAndThrowAsync
-    Svc->>Dom: apply the domain rules
-    Svc->>Repo: load and save the aggregate
-    Repo->>Db: SaveChangesAsync
-    Db->>Pg: SQL
+    Svc->>Acc: CreateAsync
+    Acc->>Pg: is the user name or the email address taken
+    Svc->>Ses: Start with the hash of the refresh token
+    Svc->>Repo: Add
+    Svc->>Tok: Issue
+    Svc->>Uow: SaveChangesAsync
+    Uow->>Pg: the user, the session and its token in one commit
+    Svc-->>Ctrl: user and tokens
+    Ctrl-->>Envoy: 201 with the two cookies
 ```

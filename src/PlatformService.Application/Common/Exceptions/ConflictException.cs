@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace PlatformService.Application.Common.Exceptions;
 
 /// <summary>
@@ -15,4 +17,14 @@ public class ConflictException : Exception
         : base(message, innerException)
     {
     }
+
+    /// <param name="errors">The messages by the property that conflicts, which become the <c>errors</c> of the ProblemDetails.</param>
+    public ConflictException(string message, IReadOnlyDictionary<string, string[]> errors, Exception? innerException = null)
+        : base(message, innerException)
+    {
+        Errors = errors;
+    }
+
+    /// <summary>The messages by property name, such as <c>UserName</c>. Empty if the conflict concerns no field.</summary>
+    public IReadOnlyDictionary<string, string[]> Errors { get; } = ReadOnlyDictionary<string, string[]>.Empty;
 }

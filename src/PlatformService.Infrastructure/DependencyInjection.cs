@@ -2,19 +2,19 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using PlatformService.Application.Abstractions;
+using PlatformService.Application.Auth;
 using PlatformService.Infrastructure.Identity;
 using PlatformService.Infrastructure.Persistence;
+using PlatformService.Infrastructure.Tokens;
 
 namespace PlatformService.Infrastructure;
 
 public static class DependencyInjection
 {
-    /// <summary>The letters of the English alphabet, the digits, the underscore and the hyphen of ADR-4.</summary>
-    private const string AllowedUserNameCharacters =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-";
-
     /// <summary>
-    /// Registers the PostgreSQL database through EF Core, its readiness health check and the accounts of Identity.
+    /// Registers the PostgreSQL database through EF Core, its readiness health check, the accounts of Identity,
+    /// the sessions and the signing of the access tokens.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
@@ -40,11 +40,31 @@ public static class DependencyInjection
         services.AddHealthChecks()
             .AddDbContextCheck<PlatformDbContext>(tags: [HealthCheckTags.Ready]);
 
-        // Only the user management of Identity, without its cookies, tokens and endpoints (PS-ADR-11).
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ISessionRepository, SessionRepository>();
+
+        // Only the user management of Identity, without its cookies, tokens and endpoints. Its store does not save
+        // on its own, so the user is saved in the commit of the use case (PS-ADR-11).
         services.AddIdentityCore<PlatformUser>(ConfigureIdentity)
-            .AddEntityFrameworkStores<PlatformDbContext>();
+            .AddUserStore<PlatformUserStore>();
+        services.AddScoped<IUserAccounts, IdentityUserAccounts>();
+
+        AddAccessTokens(services, configuration);
 
         return services;
+    }
+
+    /// <summary>The signing of the access tokens with the key of <c>Jwt:SigningKeyPath</c> (PS-ADR-12).</summary>
+    private static void AddAccessTokens(IServiceCollection services, IConfiguration configuration)
+    {
+        // Bound lazily and validated at startup, like the database settings above.
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
+
+        // The key is read once and kept in memory.
+        services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     }
 
     /// <summary>
@@ -53,12 +73,12 @@ public static class DependencyInjection
     private static void ConfigureIdentity(IdentityOptions options)
     {
         // The validators of PS-ADR-6 check the length of the user name.
-        options.User.AllowedUserNameCharacters = AllowedUserNameCharacters;
+        options.User.AllowedUserNameCharacters = AccountRules.AllowedUserNameCharacters;
         options.User.RequireUniqueEmail = true;
 
-        // 8 characters without composition rules. Identity counts UTF-16 code units, which are never fewer than
-        // the code points that the validators of PS-ADR-6 count, so it accepts every password that they accept.
-        options.Password.RequiredLength = 8;
+        // The minimum length of ADR-4 without composition rules. Identity counts UTF-16 code units, which are never
+        // fewer than the code points that the validators of PS-ADR-6 count, so it accepts every password that they accept.
+        options.Password.RequiredLength = AccountRules.PasswordMinLength;
         options.Password.RequiredUniqueChars = 1;
         options.Password.RequireDigit = false;
         options.Password.RequireLowercase = false;

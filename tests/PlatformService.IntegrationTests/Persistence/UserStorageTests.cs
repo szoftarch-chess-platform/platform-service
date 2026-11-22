@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using PlatformService.Application.Abstractions;
 using PlatformService.Infrastructure.Identity;
 using PlatformService.Infrastructure.Persistence;
+using static PlatformService.IntegrationTests.TestNames;
 
 namespace PlatformService.IntegrationTests.Persistence;
 
@@ -119,8 +121,24 @@ public sealed class UserStorageTests(PlatformApiFactory factory) : IClassFixture
         Assert.Contains(nameof(IdentityErrorDescriber.DuplicateEmail), result.Errors.Select(error => error.Code));
     }
 
-    /// <summary>A user name of 13 characters that matches the rules of ADR-4 and no other test.</summary>
-    private static string NewUserName() => $"u{Guid.NewGuid():N}"[..13];
+    /// <summary>The store of Identity leaves the save to the commit of the use case (PS-ADR-11).</summary>
+    [Fact]
+    public async Task UserManager_DoesNotSaveTheUserWithoutTheCommit()
+    {
+        var userName = NewUserName();
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<PlatformUser>>();
+            var user = new PlatformUser { Id = Guid.CreateVersion7(), UserName = userName, Email = $"{userName}@example.com" };
+            Assert.True((await userManager.CreateAsync(user, "correct horse battery")).Succeeded);
+        }
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<PlatformUser>>();
+            Assert.Null(await userManager.FindByNameAsync(userName));
+        }
+    }
 
     private static PlatformUser CreateUser(Guid id, string userName, string? email = null)
     {
@@ -151,11 +169,18 @@ public sealed class UserStorageTests(PlatformApiFactory factory) : IClassFixture
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
+    /// <summary>Creates the user with Identity and commits it, as a use case does.</summary>
     private async Task<IdentityResult> CreateWithUserManagerAsync(string userName, string email, string password)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<PlatformUser>>();
         var user = new PlatformUser { Id = Guid.CreateVersion7(), UserName = userName, Email = email };
-        return await userManager.CreateAsync(user, password);
+        var result = await userManager.CreateAsync(user, password);
+        if (result.Succeeded)
+        {
+            await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        return result;
     }
 }
