@@ -34,7 +34,7 @@ public static class DependencyInjection
         services.AddDbContext<PlatformDbContext>((serviceProvider, options) =>
         {
             var database = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
-            PlatformDbContextOptions.Configure(options, database.ConnectionString);
+            options.UsePlatformDatabase(database.ConnectionString);
         });
 
         services.AddHealthChecks()

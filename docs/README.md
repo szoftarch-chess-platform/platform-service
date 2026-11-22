@@ -26,6 +26,7 @@
 - The RabbitMQ client. It has to read the envelope of ADR-6 as plain JSON and acknowledge only after the commit.
 - How the finished games are stored, for example with the moves in a JSONB column (ADR-5), and whether the service keeps more than the last 100 games of a user (NF-3).
 - The name of the dead-letter queue and the delivery limit (ADR-6), within the `platform.` prefix.
+
 ## Next steps
 
 - Implement registration, sign-in, refresh and sign-out as the contract `platform-service.openapi.yaml` of the infra repo describes, with the cookies and the rotating refresh tokens of ADR-4, the signing key from `Jwt:SigningKeyPath`, and the exemption of the auth endpoints in the OpenAPI transformer (PS-ADR-2).

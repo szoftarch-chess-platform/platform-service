@@ -69,10 +69,11 @@ public sealed class UserStorageTests(PlatformApiFactory factory) : IClassFixture
         var userName = NewUserName();
         await AddUserAsync(CreateUser(Guid.CreateVersion7(), userName));
 
+        // Another email address, so that only the index of the user name can refuse the user.
         var exception = await Assert.ThrowsAsync<DbUpdateException>(
-            () => AddUserAsync(CreateUser(Guid.CreateVersion7(), userName.ToUpperInvariant())));
+            () => AddUserAsync(CreateUser(Guid.CreateVersion7(), userName.ToUpperInvariant(), $"{NewUserName()}@example.com")));
 
-        Assert.Equal(PostgresErrorCodes.UniqueViolation, Assert.IsType<PostgresException>(exception.InnerException).SqlState);
+        AssertUniqueViolation(exception, "ix_users_normalized_user_name");
     }
 
     /// <summary>The database refuses the address even without the check of Identity, as in two parallel registrations.</summary>
@@ -85,7 +86,7 @@ public sealed class UserStorageTests(PlatformApiFactory factory) : IClassFixture
         var exception = await Assert.ThrowsAsync<DbUpdateException>(
             () => AddUserAsync(CreateUser(Guid.CreateVersion7(), NewUserName(), email.ToUpperInvariant())));
 
-        Assert.Equal(PostgresErrorCodes.UniqueViolation, Assert.IsType<PostgresException>(exception.InnerException).SqlState);
+        AssertUniqueViolation(exception, "ix_users_normalized_email");
     }
 
     [Fact]
@@ -132,6 +133,14 @@ public sealed class UserStorageTests(PlatformApiFactory factory) : IClassFixture
             Email = email,
             NormalizedEmail = email.ToUpperInvariant(),
         };
+    }
+
+    /// <summary>A user that violates both unique indexes is refused by only one, so the name of the index is checked.</summary>
+    private static void AssertUniqueViolation(DbUpdateException exception, string indexName)
+    {
+        var postgresException = Assert.IsType<PostgresException>(exception.InnerException);
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, postgresException.SqlState);
+        Assert.Equal(indexName, postgresException.ConstraintName);
     }
 
     private async Task AddUserAsync(PlatformUser user)

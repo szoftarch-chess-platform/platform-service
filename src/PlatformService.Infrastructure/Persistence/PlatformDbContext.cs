@@ -10,10 +10,10 @@ namespace PlatformService.Infrastructure.Persistence;
 internal sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
     : IdentityUserContext<PlatformUser, Guid>(options)
 {
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
         // Identity builds its own model first, and the configurations of this assembly complete it.
-        base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlatformDbContext).Assembly);
+        base.OnModelCreating(builder);
+        builder.ApplyConfigurationsFromAssembly(typeof(PlatformDbContext).Assembly);
     }
 }

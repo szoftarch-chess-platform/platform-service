@@ -18,7 +18,7 @@ internal sealed class PlatformDbContextDesignTimeFactory : IDesignTimeDbContextF
             $"ConnectionStrings__{DatabaseOptions.ConnectionStringName}");
 
         var builder = new DbContextOptionsBuilder<PlatformDbContext>();
-        PlatformDbContextOptions.Configure(builder, connectionString);
+        builder.UsePlatformDatabase(connectionString);
         return new PlatformDbContext(builder.Options);
     }
 }

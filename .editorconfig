@@ -44,3 +44,7 @@ dotnet_naming_rule.constants_pascal_case.severity = warning
 dotnet_naming_symbols.constants.applicable_kinds = field
 dotnet_naming_symbols.constants.required_modifiers = const
 dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# EF Core generates the migrations in its own style, so the analyzers treat them as generated code.
+[src/PlatformService.Infrastructure/Persistence/Migrations/*.cs]
+generated_code = true
