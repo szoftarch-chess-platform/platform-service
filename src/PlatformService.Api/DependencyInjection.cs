@@ -33,7 +33,12 @@ public static class DependencyInjection
         });
         services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
-        services.AddAuthentication(GatewayAuthenticationDefaults.AuthenticationScheme)
+        // AddAuthentication would also register Data Protection for the cookie and remote schemes, which this service
+        // does not have, and its key ring would start with warnings about keys that nothing protects. So only the
+        // core services and the encoders that the handler takes are registered.
+        services.AddAuthenticationCore(options => options.DefaultScheme = GatewayAuthenticationDefaults.AuthenticationScheme);
+        services.AddWebEncoders();
+        new AuthenticationBuilder(services)
             .AddScheme<AuthenticationSchemeOptions, GatewayAuthenticationHandler>(
                 GatewayAuthenticationDefaults.AuthenticationScheme,
                 configureOptions: null);

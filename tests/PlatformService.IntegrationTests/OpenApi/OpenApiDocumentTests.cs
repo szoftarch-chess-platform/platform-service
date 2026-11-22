@@ -9,6 +9,8 @@ public sealed class OpenApiDocumentTests(PlatformApiFactory factory) : IClassFix
     [Theory]
     [InlineData("/api/auth/register")]
     [InlineData("/api/auth/login")]
+    [InlineData("/api/auth/refresh")]
+    [InlineData("/api/auth/logout")]
     public async Task AnonymousOperations_NeedNoIdentityHeaders(string path)
     {
         var document = await ReadDocumentAsync();

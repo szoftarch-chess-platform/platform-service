@@ -117,6 +117,11 @@ namespace PlatformService.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("issued_at");
 
+                    b.Property<DateTimeOffset?>("ReplacedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("replaced_at");
+
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");
@@ -128,6 +133,9 @@ namespace PlatformService.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_refresh_tokens");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_refresh_tokens_expires_at");
 
                     b.HasIndex("SessionId")
                         .HasDatabaseName("ix_refresh_tokens_session_id");
@@ -144,6 +152,10 @@ namespace PlatformService.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
 
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("timestamp with time zone")

@@ -29,7 +29,7 @@ public sealed class AuthServiceTests
             _sessions,
             new FakeAccessTokenIssuer(),
             new FakeUnitOfWork(_log),
-            new FixedTimeProvider(_now));
+            new ManualTimeProvider(_now));
     }
 
     [Fact]

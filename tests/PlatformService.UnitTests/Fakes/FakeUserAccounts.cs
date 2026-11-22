@@ -38,6 +38,12 @@ internal sealed class FakeUserAccounts(List<string> log) : IUserAccounts
         return Task.FromResult<UserAccount?>(entry.Account);
     }
 
+    public Task<UserAccount?> FindByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult<UserAccount?>(_accounts.Find(entry => entry.Account.Id == id).Account);
+
+    /// <summary>Removes an account, as if it had been deleted after its session started.</summary>
+    public void Remove(Guid id) => _accounts.RemoveAll(entry => entry.Account.Id == id);
+
     /// <summary>Adds an account directly, as if an earlier registration had saved it.</summary>
     public UserAccount Seed(string userName, string email, string password)
     {

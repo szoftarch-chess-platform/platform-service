@@ -19,7 +19,14 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
         builder.HasKey(token => token.Id);
         builder.Property(token => token.Id).ValueGeneratedNever();
         builder.Property(token => token.IssuedAt);
+
+        // The cleanup deletes the expired tokens by this index.
         builder.Property(token => token.ExpiresAt);
+        builder.HasIndex(token => token.ExpiresAt);
+
+        // The update of a replacement has the condition replaced_at IS NULL, so of two parallel refreshes with the
+        // same token only one replaces it, and the other gets ConcurrencyConflictException (PS-ADR-12).
+        builder.Property(token => token.ReplacedAt).IsConcurrencyToken();
 
         // A refresh is found by the hash of its token.
         builder.Property(token => token.TokenHash);

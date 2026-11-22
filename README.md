@@ -142,7 +142,7 @@ platform-service/
 │   ├── PlatformService.Application/          # use cases, DTOs, ports and validators
 │   │   ├── DependencyInjection.cs            # AddApplication
 │   │   ├── Abstractions/                     # ports
-│   │   ├── Auth/                             # use cases of registration and sign-in
+│   │   ├── Auth/                             # use cases of registration, sign-in, refresh and sign-out
 │   │   ├── Common/Exceptions/                # exceptions that become error responses
 │   │   └── Users/                            # use cases of the users
 │   ├── PlatformService.Domain/               # entities and domain rules
@@ -151,7 +151,7 @@ platform-service/
 │       ├── DependencyInjection.cs            # AddInfrastructure
 │       ├── HealthCheckTags.cs                # tags of the health checks
 │       ├── Identity/                         # user type, store and accounts of Identity
-│       ├── Persistence/                      # DbContext, Unit of Work, repositories, entity configurations and their options
+│       ├── Persistence/                      # DbContext, Unit of Work, repositories, entity configurations, their options and the cleanup of the expired sessions
 │       │   └── Migrations/                   # EF Core migrations
 │       └── Tokens/                           # signing of the access tokens and its key
 └── tests/

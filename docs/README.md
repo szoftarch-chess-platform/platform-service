@@ -1,6 +1,6 @@
 # platform-service documentation
 
-- [Architecture](architecture.md): diagrams of the layers, of the request path and of registration
+- [Architecture](architecture.md): diagrams of the layers, of the request path, of registration and of the refresh
 - System documentation: the `docs/` folder of the infra repo
 
 ## ADRs
@@ -23,13 +23,11 @@
 ## Open questions
 
 - The open question of [PS-ADR-11](adr/accounts.md) on the NFC normalization of the passwords.
-- How a refresh rotates the token when two requests with the same token arrive at the same time, so that one of them rotates and the other gets the grace window of ADR-4.
 - The RabbitMQ client. It has to read the envelope of ADR-6 as plain JSON and acknowledge only after the commit.
 - How the finished games are stored, for example with the moves in a JSONB column (ADR-5), and whether the service keeps more than the last 100 games of a user (NF-3).
 - The name of the dead-letter queue and the delivery limit (ADR-6), within the `platform.` prefix.
 
 ## Next steps
 
-- Implement refresh and sign-out as the contract `platform-service.openapi.yaml` of the infra repo describes, with the rotation, the grace window and the reuse detection of ADR-4 on the sessions of [PS-ADR-12](adr/tokens-and-sessions.md), and the periodic cleanup of the expired tokens.
 - Consume `game.finished.v1` of the contract `game-events.asyncapi.yaml` from the `platform.game-finished` quorum queue with the binding, the idempotency and the dead-letter queue of ADR-6. Test it with the examples of the contract sent through `rabbitmqadmin` (ADR-7). Describe in the README how the service connects locally to the RabbitMQ of the infra compose (ADR-6).
 - Implement the history endpoints of the contract on the stored games (F-6).

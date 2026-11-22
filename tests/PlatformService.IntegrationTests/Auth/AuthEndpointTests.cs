@@ -1,11 +1,5 @@
 using System.Net;
-using System.Security.Cryptography;
-using System.Text;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
-using PlatformService.Domain.Sessions;
-using PlatformService.Infrastructure.Persistence;
 using static PlatformService.IntegrationTests.TestNames;
 
 namespace PlatformService.IntegrationTests.Auth;
@@ -35,7 +29,7 @@ public sealed class AuthEndpointTests(PlatformApiFactory factory) : IClassFixtur
         using var response = await AuthClient.RegisterAsync(client, NewUserName());
 
         var cookie = AuthClient.Cookie(response, AuthClient.AccessTokenCookie);
-        AssertAttributes(cookie, path: "/", maxAge: TimeSpan.FromSeconds(900));
+        TokenCookieAssert.Set(cookie, path: "/", maxAge: TimeSpan.FromSeconds(900));
     }
 
     [Fact]
@@ -46,7 +40,7 @@ public sealed class AuthEndpointTests(PlatformApiFactory factory) : IClassFixtur
         using var response = await AuthClient.RegisterAsync(client, NewUserName());
 
         var cookie = AuthClient.Cookie(response, AuthClient.RefreshTokenCookie);
-        AssertAttributes(cookie, path: "/api/auth", maxAge: TimeSpan.FromSeconds(604800));
+        TokenCookieAssert.Set(cookie, path: "/api/auth", maxAge: TimeSpan.FromSeconds(604800));
     }
 
     [Fact]
@@ -57,9 +51,9 @@ public sealed class AuthEndpointTests(PlatformApiFactory factory) : IClassFixtur
         using var response = await AuthClient.RegisterAsync(client, NewUserName());
 
         var userId = (await response.ReadJsonAsync()).GetRequiredGuid("id");
-        var refreshToken = AuthClient.Cookie(response, AuthClient.RefreshTokenCookie).Value.ToString();
-        var token = Assert.Single(Assert.Single(await SessionsOfAsync(userId)).RefreshTokens);
-        Assert.Equal(SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken)), token.TokenHash);
+        var refreshToken = AuthClient.RefreshToken(response);
+        var token = Assert.Single(Assert.Single(await StoredSessions.OfUserAsync(factory, userId)).RefreshTokens);
+        Assert.Equal(AuthClient.Hash(refreshToken), token.TokenHash);
         Assert.Equal(token.IssuedAt.AddDays(7), token.ExpiresAt);
     }
 
@@ -120,8 +114,7 @@ public sealed class AuthEndpointTests(PlatformApiFactory factory) : IClassFixtur
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(userName, (await response.ReadJsonAsync()).GetProperty("userName").GetString());
-        AssertAttributes(AuthClient.Cookie(response, AuthClient.AccessTokenCookie), path: "/", maxAge: TimeSpan.FromSeconds(900));
-        AssertAttributes(AuthClient.Cookie(response, AuthClient.RefreshTokenCookie), path: "/api/auth", maxAge: TimeSpan.FromSeconds(604800));
+        TokenCookieAssert.BothSet(response);
     }
 
     [Fact]
@@ -133,7 +126,7 @@ public sealed class AuthEndpointTests(PlatformApiFactory factory) : IClassFixtur
 
         (await AuthClient.LoginAsync(client, user.GetRequiredString("userName"))).Dispose();
 
-        Assert.Equal(2, (await SessionsOfAsync(user.GetRequiredGuid("id"))).Count);
+        Assert.Equal(2, (await StoredSessions.OfUserAsync(factory, user.GetRequiredGuid("id"))).Count);
     }
 
     [Theory]
@@ -166,26 +159,5 @@ public sealed class AuthEndpointTests(PlatformApiFactory factory) : IClassFixtur
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var errors = (await response.ReadJsonAsync()).GetProperty("errors");
         Assert.Equal(["The password is required."], errors.GetProperty("password").EnumerateArray().Select(message => message.GetString()));
-    }
-
-    private static void AssertAttributes(SetCookieHeaderValue cookie, string path, TimeSpan maxAge)
-    {
-        Assert.True(cookie.HttpOnly);
-        Assert.True(cookie.Secure);
-        Assert.Equal(Microsoft.Net.Http.Headers.SameSiteMode.Strict, cookie.SameSite);
-        Assert.Equal(path, cookie.Path.ToString());
-        Assert.Equal(maxAge, cookie.MaxAge);
-        Assert.True(cookie.Domain.Length == 0, "A __Host- cookie must have no Domain, and neither has the other one.");
-        Assert.False(cookie.Value.Length == 0);
-    }
-
-    private async Task<List<Session>> SessionsOfAsync(Guid userId)
-    {
-        await using var scope = factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
-        return await db.Sessions
-            .Include(session => session.RefreshTokens)
-            .Where(session => session.UserId == userId)
-            .ToListAsync(TestContext.Current.CancellationToken);
     }
 }
