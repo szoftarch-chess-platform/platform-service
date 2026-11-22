@@ -26,7 +26,7 @@ The service uses the PostgreSQL of the infra compose. Start it in the infra fold
 docker compose up -d --wait postgres
 ```
 
-Set the connection string once with the password `PLATFORM_DB_PASSWORD` of the `.env` of the infra repo, then run the service on http://localhost:8080.
+Set the connection string once with the password `PLATFORM_DB_PASSWORD` of the `.env` of the infra repo, apply the migrations as the Migrations section describes, then run the service on http://localhost:8080.
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:Platform" "Host=localhost;Port=5432;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>" --project src/PlatformService.Api
@@ -49,13 +49,35 @@ curl -i http://localhost:8080/api/users/me
 
 In Development the API reference is at http://localhost:8080/scalar. Its authentication panel has a field for both headers. The endpoints are decided in [PS-ADR-2](docs/adr/http-api.md), and the error responses in [PS-ADR-5](docs/adr/error-handling.md).
 
+## Migrations
+
+The EF Core tools are a local tool of the repo. Restore them once.
+
+```bash
+dotnet tool restore
+```
+
+Apply the migrations to the PostgreSQL of the infra compose.
+
+```bash
+dotnet ef database update --project src/PlatformService.Infrastructure --connection "Host=localhost;Port=5432;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>"
+```
+
+Add a migration after a change of the model.
+
+```bash
+dotnet ef migrations add <Name> --project src/PlatformService.Infrastructure --output-dir Persistence/Migrations
+```
+
+The infra compose applies the migrations itself in the `platform-migrations` container before the service starts. [PS-ADR-7](docs/adr/persistence.md) describes the migrations and the bundle.
+
 ## Tests
 
 ```bash
 dotnet test
 ```
 
-The tests need no database, and the Test Explorer of Visual Studio finds them as well.
+The integration tests start PostgreSQL in a container with Testcontainers, so Docker has to run. The unit tests need nothing else. The Test Explorer of Visual Studio finds both.
 
 ## Docker
 
@@ -69,6 +91,9 @@ docker buildx build --platform linux/amd64,linux/arm64 -t platform-service .
 # Run it on the database network of the infra compose, next to its PostgreSQL
 docker run --rm --network chess-platform_postgres -p 127.0.0.1:8081:8080 -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" platform-service
 curl -i http://localhost:8081/health/live
+
+# Apply the migrations with the bundle of the image
+docker run --rm --network chess-platform_postgres --entrypoint ./efbundle -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" platform-service
 ```
 
 [PS-ADR-9](docs/adr/container-image.md) describes the image and the `GSS Encryption Mode=Disable` part of the connection string.
@@ -92,6 +117,7 @@ platform-service/
 ├── global.json                  # SDK version and test runner
 ├── Directory.Build.props        # build settings of every project
 ├── Directory.Packages.props     # versions of every package
+├── dotnet-tools.json            # local tools, such as dotnet-ef
 ├── .editorconfig, .gitignore, .dockerignore
 ├── Dockerfile                   # container image
 ├── .github/workflows/           # CI workflow
@@ -113,13 +139,15 @@ platform-service/
 │   │   ├── Common/Exceptions/                # exceptions that become error responses
 │   │   └── Users/                            # use cases of the users
 │   ├── PlatformService.Domain/               # entities and domain rules
-│   └── PlatformService.Infrastructure/       # EF Core and the port implementations
+│   └── PlatformService.Infrastructure/       # EF Core, Identity and the port implementations
 │       ├── DependencyInjection.cs            # AddInfrastructure
 │       ├── HealthCheckTags.cs                # tags of the health checks
-│       └── Persistence/                      # DbContext and its options
+│       ├── Identity/                         # user type of Identity
+│       └── Persistence/                      # DbContext, entity configurations and their options
+│           └── Migrations/                   # EF Core migrations
 └── tests/
     ├── PlatformService.UnitTests/            # tests of the Application logic
-    └── PlatformService.IntegrationTests/     # tests of the whole app in memory
+    └── PlatformService.IntegrationTests/     # tests of the whole app in memory against PostgreSQL
 ```
 
 ## Documentation

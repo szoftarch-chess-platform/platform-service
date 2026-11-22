@@ -1,13 +1,19 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using PlatformService.Infrastructure.Identity;
 
 namespace PlatformService.Infrastructure.Persistence;
 
 /// <summary>
-/// The service's database and its Unit of Work. No entities yet.
+/// The service's database and its Unit of Work. It holds the users of Identity without roles.
 /// </summary>
-internal sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> options) : DbContext(options)
+internal sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
+    : IdentityUserContext<PlatformUser, Guid>(options)
 {
-    // Picks up every IEntityTypeConfiguration<T> in this assembly.
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlatformDbContext).Assembly);
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        // Identity builds its own model first, and the configurations of this assembly complete it.
+        base.OnModelCreating(builder);
+        builder.ApplyConfigurationsFromAssembly(typeof(PlatformDbContext).Assembly);
+    }
 }
