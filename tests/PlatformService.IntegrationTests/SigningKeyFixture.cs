@@ -24,10 +24,13 @@ public sealed class SigningKeyFixture : IDisposable
     public string KeyPath { get; }
 
     /// <summary>Writes another key into a new file of the temporary folder, for example on a wrong curve.</summary>
-    public string WriteKey(ECDsa key)
+    public string WriteKey(ECDsa key) => WritePem(key.ExportPkcs8PrivateKeyPem());
+
+    /// <summary>Writes a PEM text into a new file of the temporary folder, for example one with only a public key.</summary>
+    public string WritePem(string pem)
     {
         var path = Path.Combine(_directory.FullName, $"{Guid.NewGuid():N}.pem");
-        File.WriteAllText(path, key.ExportPkcs8PrivateKeyPem());
+        File.WriteAllText(path, pem);
         return path;
     }
 

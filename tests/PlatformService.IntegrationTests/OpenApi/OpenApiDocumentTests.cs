@@ -29,6 +29,20 @@ public sealed class OpenApiDocumentTests(PlatformApiFactory factory) : IClassFix
         Assert.Equal(1, document.GetProperty("security").GetArrayLength());
     }
 
+    [Fact]
+    public async Task Conflict_OfTheRegistration_DocumentsTheTakenFields()
+    {
+        var document = await ReadDocumentAsync();
+
+        var schema = document.GetProperty("paths").GetProperty("/api/auth/register").GetProperty("post")
+            .GetProperty("responses").GetProperty("409").GetProperty("content").GetProperty("application/problem+json")
+            .GetProperty("schema");
+        var schemaName = schema.GetRequiredString("$ref").Split('/')[^1];
+
+        var properties = document.GetProperty("components").GetProperty("schemas").GetProperty(schemaName).GetProperty("properties");
+        Assert.True(properties.TryGetProperty("errors", out _));
+    }
+
     private async Task<System.Text.Json.JsonElement> ReadDocumentAsync()
     {
         using var app = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));

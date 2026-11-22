@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -28,9 +29,17 @@ internal sealed class JwtAccessTokenIssuer : IAccessTokenIssuer, IDisposable
     public JwtAccessTokenIssuer(IOptions<JwtOptions> options)
     {
         _key = SigningKeyFile.Load(options.Value.SigningKeyPath);
+
+        // The kid is the JWK thumbprint of RFC 7638, which the script of the infra repo writes into the JWKS too.
         var securityKey = new ECDsaSecurityKey(_key);
-        securityKey.KeyId = ComputeKeyId(securityKey);
-        _signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.EcdsaSha256);
+        securityKey.KeyId = Base64Url.EncodeToString(securityKey.ComputeJwkThumbprint());
+
+        // The default factory caches the signature providers in a static cache by the thumbprint of the key. Another
+        // issuer with the same key, such as the one of another app in the tests, would then sign with this disposed key.
+        _signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.EcdsaSha256)
+        {
+            CryptoProviderFactory = new CryptoProviderFactory { CacheSignatureProviders = false },
+        };
     }
 
     /// <summary>The lifetime of an access token (ADR-4).</summary>
@@ -56,10 +65,4 @@ internal sealed class JwtAccessTokenIssuer : IAccessTokenIssuer, IDisposable
     }
 
     public void Dispose() => _key.Dispose();
-
-    /// <summary>
-    /// The JWK thumbprint of RFC 7638, which is the kid of the JWKS that the script of the infra repo creates.
-    /// </summary>
-    private static string ComputeKeyId(ECDsaSecurityKey key) =>
-        Base64UrlEncoder.Encode(JsonWebKeyConverter.ConvertFromECDsaSecurityKey(key).ComputeJwkThumbprint());
 }

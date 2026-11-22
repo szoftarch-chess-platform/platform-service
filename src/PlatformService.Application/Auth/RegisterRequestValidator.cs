@@ -27,7 +27,7 @@ internal sealed partial class RegisterRequestValidator : AbstractValidator<Regis
             .WithMessage(AccountRules.EmailRequired)
             .Must(email => AccountRules.CodePointLength(email) <= AccountRules.EmailMaxLength)
             .WithMessage(AccountRules.EmailTooLong)
-            .EmailAddress()
+            .Matches(EmailAddressPattern())
             .WithMessage(AccountRules.EmailInvalid);
 
         RuleFor(request => request.Password)
@@ -41,4 +41,8 @@ internal sealed partial class RegisterRequestValidator : AbstractValidator<Regis
     // \z instead of $, because in .NET $ also matches before a final line break (PS-ADR-6).
     [GeneratedRegex(@"^[A-Za-z0-9_-]+\z")]
     private static partial Regex UserNameCharacters();
+
+    // One @ with something on both sides and no whitespace, the same rule as the frontend checks (PS-ADR-6).
+    [GeneratedRegex(@"^[^\s@]+@[^\s@]+\z")]
+    private static partial Regex EmailAddressPattern();
 }

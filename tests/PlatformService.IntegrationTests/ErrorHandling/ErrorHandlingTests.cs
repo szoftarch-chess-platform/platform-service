@@ -8,6 +8,7 @@ public sealed class ErrorHandlingTests(PlatformApiFactory factory) : IClassFixtu
     [Theory]
     [InlineData("not-found", 404)]
     [InlineData("conflict", 409)]
+    [InlineData("unauthorized", 401)]
     [InlineData("forbidden", 403)]
     [InlineData("validation", 400)]
     [InlineData("unhandled", 500)]
@@ -40,6 +41,18 @@ public sealed class ErrorHandlingTests(PlatformApiFactory factory) : IClassFixtu
         Assert.Equal(
             ["User name is required.", "User name is too short."],
             errors.GetProperty("userName").EnumerateArray().Select(message => message.GetString()));
+    }
+
+    [Fact]
+    public async Task ConflictException_WithoutFields_HasNoErrors()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/test/errors/conflict", TestContext.Current.CancellationToken);
+
+        var problem = await response.ReadJsonAsync();
+        Assert.Equal("The user name is already taken.", problem.GetProperty("detail").GetString());
+        Assert.False(problem.TryGetProperty("errors", out _));
     }
 
     [Fact]

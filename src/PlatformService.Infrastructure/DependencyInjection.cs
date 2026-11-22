@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using PlatformService.Application.Abstractions;
+using PlatformService.Application.Auth;
 using PlatformService.Infrastructure.Identity;
 using PlatformService.Infrastructure.Persistence;
 using PlatformService.Infrastructure.Tokens;
@@ -11,10 +12,6 @@ namespace PlatformService.Infrastructure;
 
 public static class DependencyInjection
 {
-    /// <summary>The letters of the English alphabet, the digits, the underscore and the hyphen of ADR-4.</summary>
-    private const string AllowedUserNameCharacters =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-";
-
     /// <summary>
     /// Registers the PostgreSQL database through EF Core, its readiness health check, the accounts of Identity,
     /// the sessions and the signing of the access tokens.
@@ -76,12 +73,12 @@ public static class DependencyInjection
     private static void ConfigureIdentity(IdentityOptions options)
     {
         // The validators of PS-ADR-6 check the length of the user name.
-        options.User.AllowedUserNameCharacters = AllowedUserNameCharacters;
+        options.User.AllowedUserNameCharacters = AccountRules.AllowedUserNameCharacters;
         options.User.RequireUniqueEmail = true;
 
-        // 8 characters without composition rules. Identity counts UTF-16 code units, which are never fewer than
-        // the code points that the validators of PS-ADR-6 count, so it accepts every password that they accept.
-        options.Password.RequiredLength = 8;
+        // The minimum length of ADR-4 without composition rules. Identity counts UTF-16 code units, which are never
+        // fewer than the code points that the validators of PS-ADR-6 count, so it accepts every password that they accept.
+        options.Password.RequiredLength = AccountRules.PasswordMinLength;
         options.Password.RequiredUniqueChars = 1;
         options.Password.RequireDigit = false;
         options.Password.RequireLowercase = false;

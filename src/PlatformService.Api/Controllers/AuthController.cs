@@ -13,10 +13,11 @@ namespace PlatformService.Api.Controllers;
 public sealed class AuthController(IAuthService authService) : ControllerBase
 {
     /// <summary>Creates the account and signs the user in, so the response sets both token cookies.</summary>
+    /// <remarks>The 409 has the shape of a validation problem, because its <c>errors</c> name the taken fields (PS-ADR-5).</remarks>
     [HttpPost("register")]
     [ProducesResponseType<CurrentUserDto>(StatusCodes.Status201Created, "application/json")]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
     public async Task<ActionResult<CurrentUserDto>> Register(RegisterRequest request, CancellationToken cancellationToken)
     {
         var result = await authService.RegisterAsync(request, cancellationToken);

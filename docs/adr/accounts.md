@@ -1,6 +1,6 @@
 # PS-ADR-11: User accounts with ASP.NET Core Identity
 
-**Related:** F-1, NF-1, ADR-3, ADR-4, [PS-ADR-1](clean-architecture.md), [PS-ADR-4](gateway-authentication.md), [PS-ADR-5](error-handling.md), [PS-ADR-6](validation.md), [PS-ADR-7](persistence.md), [PS-ADR-12](tokens-and-sessions.md)
+**Related:** F-1, NF-1, ADR-3, ADR-4, [PS-ADR-1](clean-architecture.md), [PS-ADR-4](gateway-authentication.md), [PS-ADR-5](error-handling.md), [PS-ADR-6](validation.md), [PS-ADR-7](persistence.md), [PS-ADR-9](container-image.md), [PS-ADR-12](tokens-and-sessions.md)
 
 ## Context
 
@@ -42,7 +42,12 @@ ADR-4 decides the tokens and the rules of the accounts, and NF-1 requires that t
 - Every operation of Identity that changes a user needs the commit of its use case.
 - When the users get their first business data, such as an Élő rating or friendships, the team decides again whether it goes into a Domain entity with the same id. The id and the user name stay in `PlatformUser` either way, and no business data goes into `PlatformUser` without that decision.
 
+## Open questions
+
+- Whether the password is normalized to NFC before it is hashed, as NIST SP 800-63B-4 recommends, so that a password matches however its characters were composed. An ő can arrive as one character or as an o with a combining accent. The normalization of .NET needs ICU, but the chiseled image of PS-ADR-9 runs .NET in invariant globalization mode, where `string.Normalize` returns the text unchanged without an error. The image with ICU, `aspnet:10.0-noble-chiseled-extra`, is about 57 MB larger uncompressed. The lookup normalizer of Identity has the same gap, so in the image two spellings of one non-ASCII email address count as two addresses.
+
 ## Sources
 
 - Configure ASP.NET Core Identity: https://learn.microsoft.com/aspnet/core/security/authentication/identity-configuration?view=aspnetcore-10.0
 - `PasswordHasher` source: https://github.com/dotnet/aspnetcore/blob/main/src/Identity/Extensions.Core/src/PasswordHasher.cs
+- NIST SP 800-63B-4, the normalization of passwords: https://pages.nist.gov/800-63-4/sp800-63b/authenticators/

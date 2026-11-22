@@ -46,11 +46,26 @@ public sealed class RegisterRequestValidatorTests
             Messages(Request(userName: "a."), nameof(RegisterRequest.UserName)));
     }
 
+    // The frontend checks the same rule, which takes any character except whitespace around one @.
+    [Theory]
+    [InlineData("a@b")]
+    [InlineData("álmos@példa.hu")]
+    public void Email_WithinTheRules_IsValid(string email)
+    {
+        Assert.Empty(Messages(Request(email: email), nameof(RegisterRequest.Email)));
+    }
+
     [Theory]
     [InlineData("", AccountRules.EmailRequired)]
     [InlineData(null, AccountRules.EmailRequired)]
     [InlineData("alice", AccountRules.EmailInvalid)]
     [InlineData("alice@", AccountRules.EmailInvalid)]
+    [InlineData("@example.com", AccountRules.EmailInvalid)]
+    [InlineData("alice@@example.com", AccountRules.EmailInvalid)]
+    [InlineData("alice @example.com", AccountRules.EmailInvalid)]
+    [InlineData("alice@example .com", AccountRules.EmailInvalid)]
+    // In .NET $ would match before the final line break, so this one would pass with $.
+    [InlineData("alice@example.com\n", AccountRules.EmailInvalid)]
     public void Email_AgainstTheRules_HasItsMessage(string? email, string message)
     {
         Assert.Equal([message], Messages(Request(email: email), nameof(RegisterRequest.Email)));

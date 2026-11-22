@@ -1,6 +1,6 @@
 # PS-ADR-9: Chiseled container image
 
-**Related:** NF-9, ADR-2, [PS-ADR-2](http-api.md), [PS-ADR-8](configuration-and-logging.md)
+**Related:** NF-9, ADR-2, [PS-ADR-2](http-api.md), [PS-ADR-8](configuration-and-logging.md), [PS-ADR-11](accounts.md)
 
 ## Context
 
@@ -15,4 +15,4 @@ The service runs as a container image, which has to work on amd64 and arm64 mach
 
 ## Consequences
 
-- The image has no ICU or time zone data, so .NET runs in invariant globalization mode. Timestamps are in UTC anyway.
+- The image has no ICU or time zone data, so .NET runs in invariant globalization mode. Timestamps are in UTC anyway. Unicode normalization does nothing in this mode, which the open question of PS-ADR-11 concerns.

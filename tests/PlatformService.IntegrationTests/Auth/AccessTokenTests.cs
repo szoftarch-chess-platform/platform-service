@@ -1,7 +1,9 @@
 using System.Buffers.Text;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using static PlatformService.IntegrationTests.TestNames;
 
 namespace PlatformService.IntegrationTests.Auth;
@@ -51,6 +53,30 @@ public sealed class AccessTokenTests(PlatformApiFactory factory, SigningKeyFixtu
         var payload = Decode(AuthClient.Cookie(response, AuthClient.AccessTokenCookie).Value.ToString().Split('.')[1]);
 
         Assert.Equal((await response.ReadJsonAsync()).GetProperty("id").GetString(), payload.GetProperty("sub").GetString());
+    }
+
+    /// <summary>
+    /// The tests run several apps with the same key in one process, and the signing library could share one key
+    /// between them. A new key makes sure that the stopped app signed first.
+    /// </summary>
+    [Fact]
+    public async Task AccessToken_IsSigned_AfterAnotherAppWithTheSameKeyStopped()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var keyPath = signingKey.WriteKey(key);
+
+        await using (var stoppedApp = factory.WithWebHostBuilder(builder => builder.UseSetting("Jwt:SigningKeyPath", keyPath)))
+        {
+            using var stoppedClient = AuthClient.Create(stoppedApp);
+            using var first = await AuthClient.RegisterAsync(stoppedClient, NewUserName());
+            Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        }
+
+        await using var app = factory.WithWebHostBuilder(builder => builder.UseSetting("Jwt:SigningKeyPath", keyPath));
+        using var client = AuthClient.Create(app);
+        using var response = await AuthClient.RegisterAsync(client, NewUserName());
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     /// <summary>

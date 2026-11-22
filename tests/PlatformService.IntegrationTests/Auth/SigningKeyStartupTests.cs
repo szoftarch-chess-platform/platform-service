@@ -32,6 +32,17 @@ public sealed class SigningKeyStartupTests(PlatformApiFactory factory, SigningKe
         Assert.Contains("not on the P-256 curve", message, StringComparison.Ordinal);
     }
 
+    /// <summary>A public key imports without an error, but it cannot sign, so the first sign-in would fail.</summary>
+    [Fact]
+    public void Startup_WithOnlyThePublicKey_Fails()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+        var message = StartupError(signingKey.WritePem(key.ExportSubjectPublicKeyInfoPem()));
+
+        Assert.Contains("holds only a public key", message, StringComparison.Ordinal);
+    }
+
     /// <summary>Starts the app with another key path and returns the messages of the error that stopped it.</summary>
     private string StartupError(string signingKeyPath)
     {

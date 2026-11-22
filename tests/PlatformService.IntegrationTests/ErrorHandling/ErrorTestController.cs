@@ -22,6 +22,9 @@ public sealed class ErrorTestController : ControllerBase
     [HttpGet("conflict")]
     public IActionResult ThrowConflict() => throw new ConflictException("The user name is already taken.");
 
+    [HttpGet("unauthorized")]
+    public IActionResult ThrowUnauthorized() => throw new UnauthorizedException("The user name or the password is wrong.");
+
     [HttpGet("forbidden")]
     public IActionResult ThrowForbidden() => throw new ForbiddenException("You are not a player of this game.");
 
