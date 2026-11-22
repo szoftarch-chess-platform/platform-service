@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using PlatformService.Application.Abstractions;
 using PlatformService.Infrastructure.Identity;
 using PlatformService.Infrastructure.Persistence;
+using PlatformService.Infrastructure.Tokens;
 
 namespace PlatformService.Infrastructure;
 
@@ -14,7 +16,8 @@ public static class DependencyInjection
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-";
 
     /// <summary>
-    /// Registers the PostgreSQL database through EF Core, its readiness health check and the accounts of Identity.
+    /// Registers the PostgreSQL database through EF Core, its readiness health check, the accounts of Identity,
+    /// the sessions and the signing of the access tokens.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
@@ -40,11 +43,31 @@ public static class DependencyInjection
         services.AddHealthChecks()
             .AddDbContextCheck<PlatformDbContext>(tags: [HealthCheckTags.Ready]);
 
-        // Only the user management of Identity, without its cookies, tokens and endpoints (PS-ADR-11).
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ISessionRepository, SessionRepository>();
+
+        // Only the user management of Identity, without its cookies, tokens and endpoints. Its store does not save
+        // on its own, so the user is saved in the commit of the use case (PS-ADR-11).
         services.AddIdentityCore<PlatformUser>(ConfigureIdentity)
-            .AddEntityFrameworkStores<PlatformDbContext>();
+            .AddUserStore<PlatformUserStore>();
+        services.AddScoped<IUserAccounts, IdentityUserAccounts>();
+
+        AddAccessTokens(services, configuration);
 
         return services;
+    }
+
+    /// <summary>The signing of the access tokens with the key of <c>Jwt:SigningKeyPath</c> (PS-ADR-12).</summary>
+    private static void AddAccessTokens(IServiceCollection services, IConfiguration configuration)
+    {
+        // Bound lazily and validated at startup, like the database settings above.
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
+
+        // The key is read once and kept in memory.
+        services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     }
 
     /// <summary>

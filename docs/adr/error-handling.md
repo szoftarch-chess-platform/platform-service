@@ -1,6 +1,6 @@
 # PS-ADR-5: Errors as ProblemDetails
 
-**Related:** [PS-ADR-3](request-pipeline.md), [PS-ADR-6](validation.md)
+**Related:** [PS-ADR-3](request-pipeline.md), [PS-ADR-6](validation.md), [PS-ADR-11](accounts.md), [PS-ADR-12](tokens-and-sessions.md)
 
 ## Context
 
@@ -17,7 +17,8 @@ Errors come from several places, such as the exceptions of the use cases, failed
 | Cause | Status |
 |---|---|
 | `NotFoundException` | 404 |
-| `ConflictException` | 409 |
+| `ConflictException` | 409, with `errors` under camelCase keys when the exception names the conflicting fields, such as a taken user name of PS-ADR-11 |
+| `UnauthorizedException` | 401, such as a wrong user name or password at sign-in (PS-ADR-12) |
 | `ForbiddenException` or a policy that denies access | 403 |
 | FluentValidation `ValidationException` | 400 `ValidationProblemDetails`, with `errors` grouped by property under camelCase keys such as `address.postalCode` |
 | Malformed JSON or a wrong type in the request | 400 from `ApiController` |

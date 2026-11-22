@@ -53,7 +53,11 @@ public static class DependencyInjection
         // Used outside MVC, for example for the ProblemDetails of the exception handler and the status code pages.
         services.ConfigureHttpJsonOptions(options => ApplyJsonConventions(options.SerializerOptions));
 
-        services.AddOpenApi(options => options.AddDocumentTransformer<GatewayIdentitySecuritySchemeTransformer>());
+        services.AddOpenApi(options =>
+        {
+            options.AddDocumentTransformer<GatewayIdentitySecuritySchemeTransformer>();
+            options.AddOperationTransformer<AllowAnonymousSecurityTransformer>();
+        });
 
         return services;
     }

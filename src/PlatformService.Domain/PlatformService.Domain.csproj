@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Entities and domain rules. References nothing and has no NuGet packages. Empty for now. -->
+  <!-- Entities and domain rules. References nothing and has no NuGet packages. -->
 
 </Project>

@@ -24,7 +24,8 @@ internal sealed partial class ProblemDetailsExceptionHandler(
         var problemDetails = exception switch
         {
             NotFoundException => new ProblemDetails { Status = StatusCodes.Status404NotFound, Detail = exception.Message },
-            ConflictException => new ProblemDetails { Status = StatusCodes.Status409Conflict, Detail = exception.Message },
+            ConflictException conflictException => CreateConflictProblem(conflictException),
+            UnauthorizedException => new ProblemDetails { Status = StatusCodes.Status401Unauthorized, Detail = exception.Message },
             ForbiddenException => new ProblemDetails { Status = StatusCodes.Status403Forbidden, Detail = exception.Message },
             ValidationException validationException => CreateValidationProblem(validationException),
             _ => new ProblemDetails
@@ -55,6 +56,21 @@ internal sealed partial class ProblemDetailsExceptionHandler(
         });
 
         return true;
+    }
+
+    /// <summary>A conflict that names its fields gets the same <c>errors</c> as a validation problem, keyed the same way.</summary>
+    private static ProblemDetails CreateConflictProblem(ConflictException exception)
+    {
+        var problem = new ProblemDetails { Status = StatusCodes.Status409Conflict, Detail = exception.Message };
+        if (exception.Errors.Count > 0)
+        {
+            problem.Extensions["errors"] = exception.Errors.ToDictionary(
+                error => ToCamelCasePath(error.Key),
+                error => error.Value,
+                StringComparer.Ordinal);
+        }
+
+        return problem;
     }
 
     private static ValidationProblemDetails CreateValidationProblem(ValidationException exception)
