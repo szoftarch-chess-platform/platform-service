@@ -18,7 +18,7 @@ public sealed class RefreshResult
         RefreshToken = refreshToken;
     }
 
-    /// <summary>The token is missing, unknown, expired or revoked, or it was replaced before the grace window.</summary>
+    /// <summary>The token is missing, unknown, expired or revoked, or it was replaced and came back after its grace window.</summary>
     public static RefreshResult SessionEnded { get; } = new(null, null);
 
     [MemberNotNullWhen(true, nameof(AccessToken), nameof(RefreshToken))]

@@ -90,6 +90,6 @@ internal sealed partial class SessionService(
     /// <summary>A replaced token that comes back usually means a stolen token (RFC 9700). The token itself is never logged.</summary>
     [LoggerMessage(
         Level = LogLevel.Warning,
-        Message = "A refresh token that was replaced before the grace window came back, so session {SessionId} of user {UserId} is revoked.")]
+        Message = "A replaced refresh token came back after its grace window, so session {SessionId} of user {UserId} is revoked.")]
     private static partial void LogReuseDetected(ILogger logger, Guid sessionId, Guid userId);
 }

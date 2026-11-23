@@ -46,7 +46,7 @@ public sealed class Session
     /// <exception cref="ArgumentException">The session was loaded without the presented token.</exception>
     public RefreshOutcome Refresh(byte[] presentedTokenHash, byte[] newTokenHash, DateTimeOffset now)
     {
-        var token = _refreshTokens.Find(token => token.TokenHash.AsSpan().SequenceEqual(presentedTokenHash))
+        var token = _refreshTokens.Find(candidate => candidate.TokenHash.AsSpan().SequenceEqual(presentedTokenHash))
             ?? throw new ArgumentException("The session has no refresh token with this hash.", nameof(presentedTokenHash));
 
         if (RevokedAt is not null)

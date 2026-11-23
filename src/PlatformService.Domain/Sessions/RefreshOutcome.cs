@@ -15,6 +15,6 @@ public enum RefreshOutcome
     /// <summary>The token has expired.</summary>
     TokenExpired,
 
-    /// <summary>The token was replaced before the grace window, so the session is revoked now.</summary>
+    /// <summary>The replaced token came back after its grace window, so the session is revoked now.</summary>
     ReuseDetected,
 }

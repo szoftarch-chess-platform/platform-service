@@ -29,18 +29,18 @@ internal static class TokenCookies
     /// </summary>
     public static void Delete(HttpResponse response)
     {
-        response.Cookies.Delete(AccessTokenName, Options(AccessTokenPath));
-        response.Cookies.Delete(RefreshTokenName, Options(RefreshTokenPath));
+        response.Cookies.Delete(AccessTokenName, CreateOptions(AccessTokenPath));
+        response.Cookies.Delete(RefreshTokenName, CreateOptions(RefreshTokenPath));
     }
 
     private static void Append(HttpResponse response, string name, IssuedToken token, string path)
     {
-        var options = Options(path);
+        var options = CreateOptions(path);
         options.MaxAge = token.Lifetime;
         response.Cookies.Append(name, token.Value, options);
     }
 
-    private static CookieOptions Options(string path) => new()
+    private static CookieOptions CreateOptions(string path) => new()
     {
         HttpOnly = true,
         Secure = true,

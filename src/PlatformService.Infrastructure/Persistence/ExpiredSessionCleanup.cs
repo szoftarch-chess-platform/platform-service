@@ -29,7 +29,7 @@ internal sealed partial class ExpiredSessionCleanup(
             .Where(session => !session.RefreshTokens.Any(token => token.ExpiresAt > now))
             .ExecuteDeleteAsync(cancellationToken);
 
-        // The replaced tokens of the sessions that are still valid.
+        // The expired tokens of the sessions that still have a valid one.
         var refreshTokens = await dbContext.Set<RefreshToken>()
             .Where(token => token.ExpiresAt <= now)
             .ExecuteDeleteAsync(cancellationToken);

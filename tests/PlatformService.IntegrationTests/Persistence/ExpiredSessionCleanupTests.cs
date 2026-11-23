@@ -13,7 +13,7 @@ namespace PlatformService.IntegrationTests.Persistence;
 
 /// <summary>
 /// The cleanup of PS-ADR-12 at the real time. Only this test writes rows that have expired by then, because the
-/// clocks of the other tests never go back, so it deletes no row of another test.
+/// clocks of the other tests are never behind the real time, so it deletes no row of another test.
 /// </summary>
 public sealed class ExpiredSessionCleanupTests(PlatformApiFactory factory) : IClassFixture<PlatformApiFactory>
 {
