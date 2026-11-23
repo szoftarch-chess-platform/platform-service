@@ -3,15 +3,18 @@ namespace PlatformService.IntegrationTests.Messaging;
 /// <summary>Waits for something that the consumer does in the background.</summary>
 internal static class Eventually
 {
-    private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan _interval = TimeSpan.FromMilliseconds(50);
+    /// <summary>How long a test waits for the broker or the consumer.</summary>
+    public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
 
-    /// <summary>Asks the probe again until it returns a value, and fails after 15 seconds.</summary>
+    /// <summary>How long a test waits before it tries again.</summary>
+    public static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(50);
+
+    /// <summary>Asks the probe again until it returns a value, and fails after <see cref="Timeout"/>.</summary>
     /// <param name="what">What the test waits for, for the message of the failure.</param>
     public static async Task<T> GetAsync<T>(Func<Task<T?>> probe, string what)
         where T : class
     {
-        var deadline = DateTimeOffset.UtcNow + _timeout;
+        var deadline = DateTimeOffset.UtcNow + Timeout;
         while (true)
         {
             if (await probe() is { } value)
@@ -21,10 +24,10 @@ internal static class Eventually
 
             if (DateTimeOffset.UtcNow > deadline)
             {
-                Assert.Fail($"Waited {_timeout.TotalSeconds} seconds for {what}.");
+                Assert.Fail($"Waited {Timeout.TotalSeconds} seconds for {what}.");
             }
 
-            await Task.Delay(_interval, TestContext.Current.CancellationToken);
+            await Task.Delay(Interval, TestContext.Current.CancellationToken);
         }
     }
 }

@@ -18,6 +18,10 @@ public sealed class RabbitMqFixture : IAsyncLifetime
 {
     public const string AdminUser = "admin";
     public const string ServiceUser = "platform-service";
+
+    /// <summary>The delivery limit of the policy of the infra repo.</summary>
+    public const int DeliveryLimit = 20;
+
     private const string AdminPassword = "admin-password";
     private const string ServicePassword = "platform-service-password";
     private const ushort AmqpPort = 5672;
@@ -75,7 +79,7 @@ public sealed class RabbitMqFixture : IAsyncLifetime
                 ["dead-letter-exchange"] = "platform.game-finished.dlx",
                 ["dead-letter-strategy"] = "at-least-once",
                 ["overflow"] = "reject-publish",
-                ["delivery-limit"] = 20,
+                ["delivery-limit"] = DeliveryLimit,
                 ["delayed-retry-type"] = "all",
                 ["delayed-retry-min"] = 20,
                 ["delayed-retry-max"] = 100,

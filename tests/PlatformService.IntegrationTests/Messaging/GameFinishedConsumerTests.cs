@@ -114,23 +114,29 @@ public sealed class GameFinishedConsumerTests(PlatformApiFactory factory, Rabbit
         await WaitForGameAsync(game.GameId);
     }
 
+    /// <summary>
+    /// A <c>basic.nack</c> does not count toward the delivery limit (PS-ADR-14), so the message fails once more than the
+    /// limit allows a <c>basic.reject</c>, and the game is still stored.
+    /// </summary>
     [Fact]
-    public async Task ATransientError_ComesBackUntilTheGameIsStored()
+    public async Task ATransientError_DoesNotCountTowardTheDeliveryLimit()
     {
         await using var broker = await rabbitMq.CreateBrokerAsync();
         await broker.DeclareGameEventsAsync();
-        var failing = new FailingUseCase(call => call <= 3 ? new TransientDbException() : null);
+        const int failures = RabbitMqFixture.DeliveryLimit + 1;
+        var failing = new FailingUseCase(call => call <= failures ? new TransientDbException() : null);
         await using var app = StartConsumer(broker, failing);
         var game = GameEvents.NewGame(Guid.CreateVersion7());
 
         await broker.PublishAsync(game);
 
         await WaitForGameAsync(game.GameId);
-        Assert.Equal(4, failing.Calls);
+        Assert.Equal(failures + 1, failing.Calls);
+        Assert.Equal(0u, await broker.ReadyMessagesAsync(GameFinishedTopology.DeadLetterQueue));
     }
 
     /// <summary>
-    /// The delivery limit of the policy is 20, so the message is delivered 21 times, and the 21st failure sends it to the
+    /// The message is delivered once more than the delivery limit of the policy, and that failure sends it to the
     /// dead-letter queue.
     /// </summary>
     [Fact]
@@ -147,7 +153,7 @@ public sealed class GameFinishedConsumerTests(PlatformApiFactory factory, Rabbit
         var deadLetter = await broker.NextDeadLetterAsync();
         Assert.Equal("delivery_limit", DeathReason(deadLetter));
         Assert.Equal(game.EventId.ToString(), deadLetter.BasicProperties.MessageId);
-        Assert.Equal(21, failing.Calls);
+        Assert.Equal(RabbitMqFixture.DeliveryLimit + 1, failing.Calls);
     }
 
     [Fact]
@@ -180,7 +186,7 @@ public sealed class GameFinishedConsumerTests(PlatformApiFactory factory, Rabbit
     private WebApplicationFactory<Program> StartConsumer(TestBroker broker, FailingUseCase? failing = null)
     {
         var app = factory.WithConsumer(broker.ServiceUri, failing is null ? null : failing.Register);
-        _ = app.Services;
+        app.StartServer();
         return app;
     }
 

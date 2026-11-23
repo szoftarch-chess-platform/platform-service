@@ -13,8 +13,6 @@ namespace PlatformService.IntegrationTests.Messaging;
 /// </summary>
 internal sealed class TestBroker : IAsyncDisposable
 {
-    private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(15);
-
     private readonly RabbitMqFixture _rabbitMq;
     private readonly IConnection _connection;
 
@@ -63,7 +61,7 @@ internal sealed class TestBroker : IAsyncDisposable
             Type = GameFinishedEvent.TypeName,
         };
 
-        var deadline = DateTimeOffset.UtcNow + _timeout;
+        var deadline = DateTimeOffset.UtcNow + Eventually.Timeout;
         while (true)
         {
             try
@@ -75,7 +73,7 @@ internal sealed class TestBroker : IAsyncDisposable
             }
             catch (PublishReturnException) when (DateTimeOffset.UtcNow < deadline)
             {
-                await Task.Delay(50, TestContext.Current.CancellationToken);
+                await Task.Delay(Eventually.Interval, TestContext.Current.CancellationToken);
             }
         }
     }

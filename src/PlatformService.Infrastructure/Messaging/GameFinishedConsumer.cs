@@ -25,12 +25,13 @@ internal sealed partial class GameFinishedConsumer(
     /// <summary>The name of the connection in the web management interface of RabbitMQ.</summary>
     public const string ConnectionName = "platform-service";
 
+    private readonly RabbitMqOptions _options = options.Value;
+
     // The handling of the last delivery, which the stop waits for before it closes the channel.
     private Task _handling = Task.CompletedTask;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var retryDelay = options.Value.RetryDelay;
         do
         {
             try
@@ -38,7 +39,7 @@ internal sealed partial class GameFinishedConsumer(
                 var reason = await ConsumeAsync(stoppingToken);
                 if (!stoppingToken.IsCancellationRequested)
                 {
-                    LogStopped(logger, reason, retryDelay);
+                    LogStopped(logger, reason, _options.RetryDelay);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -47,11 +48,12 @@ internal sealed partial class GameFinishedConsumer(
             }
             catch (Exception exception)
             {
-                // For example the broker is down. An unhandled exception would stop the whole service.
-                LogConnectionFailed(logger, exception, retryDelay);
+                // For example the broker is down or refuses a declaration. An unhandled exception would stop the
+                // whole service.
+                LogConsumingFailed(logger, exception, _options.RetryDelay);
             }
         }
-        while (await WaitAsync(retryDelay, stoppingToken));
+        while (await WaitAsync(_options.RetryDelay, stoppingToken));
     }
 
     /// <summary>Consumes on one connection, and returns why consuming stopped.</summary>
@@ -59,7 +61,7 @@ internal sealed partial class GameFinishedConsumer(
     {
         var factory = new ConnectionFactory
         {
-            Uri = new Uri(options.Value.ConnectionString),
+            Uri = new Uri(_options.ConnectionString),
             ClientProvidedName = ConnectionName,
             AutomaticRecoveryEnabled = false,
             TopologyRecoveryEnabled = false,
@@ -72,7 +74,11 @@ internal sealed partial class GameFinishedConsumer(
 
         var stopped = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var consumer = new AsyncEventingBasicConsumer(channel);
-        consumer.ReceivedAsync += (_, delivery) => _handling = HandleDeliveryAsync(channel, delivery, stoppingToken);
+        consumer.ReceivedAsync += (_, delivery) =>
+        {
+            _handling = HandleDeliveryAsync(channel, delivery, stoppingToken);
+            return _handling;
+        };
         consumer.ShutdownAsync += (_, shutdown) =>
         {
             stopped.TrySetResult($"the channel closed with {shutdown.ReplyCode} {shutdown.ReplyText}");
@@ -120,8 +126,8 @@ internal sealed partial class GameFinishedConsumer(
             }
             catch (OperationInterruptedException exception) when (exception.ShutdownReason?.ReplyCode == Constants.NotFound)
             {
-                LogWaitingForExchange(logger, GameFinishedTopology.Exchange, options.Value.RetryDelay);
-                await Task.Delay(options.Value.RetryDelay, timeProvider, stoppingToken);
+                LogWaitingForExchange(logger, GameFinishedTopology.Exchange, _options.RetryDelay);
+                await Task.Delay(_options.RetryDelay, timeProvider, stoppingToken);
             }
         }
     }
@@ -157,9 +163,11 @@ internal sealed partial class GameFinishedConsumer(
             case DeliveryOutcome.Fail:
                 await channel.BasicRejectAsync(deliveryTag, requeue: true);
                 break;
-            default:
+            case DeliveryOutcome.DeadLetter:
                 await channel.BasicRejectAsync(deliveryTag, requeue: false);
                 break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "The outcome has no answer to the broker.");
         }
     }
 
@@ -201,8 +209,8 @@ internal sealed partial class GameFinishedConsumer(
     [LoggerMessage(Level = LogLevel.Warning, Message = "Consuming stopped because {Reason}, and the consumer connects again in {RetryDelay}.")]
     private static partial void LogStopped(ILogger logger, string reason, TimeSpan retryDelay);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "The connection to RabbitMQ failed, and the consumer connects again in {RetryDelay}.")]
-    private static partial void LogConnectionFailed(ILogger logger, Exception exception, TimeSpan retryDelay);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Consuming from RabbitMQ failed, and the consumer connects again in {RetryDelay}.")]
+    private static partial void LogConsumingFailed(ILogger logger, Exception exception, TimeSpan retryDelay);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "The answer for the delivery {DeliveryTag} did not reach the broker, so the broker delivers the message again.")]
     private static partial void LogAnswerFailed(ILogger logger, Exception exception, ulong deliveryTag);
