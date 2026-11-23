@@ -29,10 +29,7 @@ internal sealed partial class RecordFinishedGameCommandValidator : AbstractValid
             .Must(move => move is not null && UciMove().IsMatch(move))
             .WithMessage(MoveNotUci);
 
-        RuleFor(command => command.TimeControl).NotNull();
-        RuleFor(command => command.TimeControl.InitialMs)
-            .GreaterThan(0)
-            .When(command => command.TimeControl is not null);
+        RuleFor(command => command.TimeControl).NotNull().SetValidator(new TimeControlValidator());
 
         RuleFor(command => command.StartedAt).NotEmpty();
         RuleFor(command => command.EndedAt).NotEmpty();
@@ -52,6 +49,15 @@ internal sealed partial class RecordFinishedGameCommandValidator : AbstractValid
             RuleFor(player => player.UserId)
                 .NotEmpty()
                 .When(player => player.Kind == Player.UserKind);
+        }
+    }
+
+    /// <summary>The time of each user is at least one millisecond, as the minimum of the contract says.</summary>
+    private sealed class TimeControlValidator : AbstractValidator<TimeControlDto>
+    {
+        public TimeControlValidator()
+        {
+            RuleFor(timeControl => timeControl.InitialMs).GreaterThanOrEqualTo(1);
         }
     }
 }

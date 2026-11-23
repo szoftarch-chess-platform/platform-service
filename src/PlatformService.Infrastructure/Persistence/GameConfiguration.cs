@@ -5,8 +5,9 @@ using PlatformService.Domain.Games;
 namespace PlatformService.Infrastructure.Persistence;
 
 /// <summary>
-/// The <c>games</c> table of PS-ADR-13. The players and the time control are complex types in columns of the same
-/// table, and the moves are a <c>text[]</c> column.
+/// The <c>games</c> table of PS-ADR-13. The Domain sets its properties only in the constructor, so they are mapped
+/// explicitly. The players and the time control are complex types in columns of the same table, and the moves are a
+/// <c>text[]</c> column.
 /// </summary>
 /// <remarks>
 /// EF Core 10 cannot index a property of a complex type, so the migration creates the indexes of
@@ -31,7 +32,8 @@ internal sealed class GameConfiguration : IEntityTypeConfiguration<Game>
         builder.HasKey(game => game.Id).HasName(PrimaryKey);
         builder.Property(game => game.Id).ValueGeneratedNever();
 
-        // The id of the event stays out of the Domain, and the repository sets it (ADR-6).
+        // The repository sets the id of the event, so it stays out of the Domain (PS-ADR-13). Its unique index refuses
+        // a second delivery of the same event (ADR-6).
         builder.Property<Guid>(EventIdProperty);
         builder.HasIndex(EventIdProperty).IsUnique().HasDatabaseName(EventIdIndex);
 

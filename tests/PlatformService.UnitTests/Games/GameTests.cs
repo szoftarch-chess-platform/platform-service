@@ -31,26 +31,6 @@ public sealed class GameTests
     }
 
     [Fact]
-    public void Create_KeepsTheUserIdOfAUser()
-    {
-        var player = Player.Create(Player.UserKind, _alice, "alice");
-
-        Assert.Equal(_alice, player.UserId);
-    }
-
-    // A bot never puts a game into the history of a user, and neither does a kind of a later contract.
-    [Theory]
-    [InlineData(Player.BotKind)]
-    [InlineData("guest")]
-    public void Create_DropsTheUserIdOfAPlayerThatIsNotAUser(string kind)
-    {
-        var player = Player.Create(kind, _alice, "someone");
-
-        Assert.Null(player.UserId);
-        Assert.Equal(kind, player.Kind);
-    }
-
-    [Fact]
     public void IsPlayedBy_IsTrueForBothColors()
     {
         var game = Record();

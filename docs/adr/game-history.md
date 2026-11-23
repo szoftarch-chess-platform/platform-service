@@ -43,6 +43,7 @@ The game-service hands every finished game over in the event `game.finished.v1` 
 
 - **Owned types for the players:** the indexes would be in the model, but an owned type is an entity with a hidden key, while complex types are meant for value objects.
 - **A `game_players` table:** one index without OR, but two rows per game, a join in every query and a list of players in the Domain.
+- **Foreign keys from the user ids to the `users` table:** every stored id would belong to an account, but a game with an unknown user id would be refused as a whole and would be missing from the history of its other player too. The user ids in the examples of the contract belong to no account, so the test events that ADR-7 sends through `rabbitmqadmin` would end in the dead-letter queue.
 - **The moves in a JSONB column:** a structure that a list of strings does not need.
 - **C# enums for the values:** a new value of a contract would refuse the event.
 - **Keeping only the last 100 games of a user:** the cleanup would also delete games from the history of their other player.

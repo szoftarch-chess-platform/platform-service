@@ -14,9 +14,9 @@ public sealed class GamesController(IGameHistoryService gameHistory) : Controlle
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
     public async Task<ActionResult<GamePageDto>> List(
-        CancellationToken cancellationToken,
         [FromQuery] int page = ListGamesRequest.DefaultPage,
-        [FromQuery] int pageSize = ListGamesRequest.DefaultPageSize) =>
+        [FromQuery] int pageSize = ListGamesRequest.DefaultPageSize,
+        CancellationToken cancellationToken = default) =>
         await gameHistory.ListAsync(new ListGamesRequest(page, pageSize), cancellationToken);
 
     /// <summary>A finished game of the user with its moves.</summary>

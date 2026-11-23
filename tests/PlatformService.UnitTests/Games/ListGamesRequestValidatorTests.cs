@@ -24,7 +24,7 @@ public sealed class ListGamesRequestValidatorTests
 
         var error = Assert.Single(result.Errors);
         Assert.Equal(nameof(ListGamesRequest.Page), error.PropertyName);
-        Assert.Equal(ListGamesRequestValidator.PageTooSmall, error.ErrorMessage);
+        Assert.Equal("The page must be at least 1.", error.ErrorMessage);
     }
 
     [Theory]
@@ -36,6 +36,6 @@ public sealed class ListGamesRequestValidatorTests
 
         var error = Assert.Single(result.Errors);
         Assert.Equal(nameof(ListGamesRequest.PageSize), error.PropertyName);
-        Assert.Equal(ListGamesRequestValidator.PageSizeOutOfRange, error.ErrorMessage);
+        Assert.Equal("The page size must be 1 to 100.", error.ErrorMessage);
     }
 }

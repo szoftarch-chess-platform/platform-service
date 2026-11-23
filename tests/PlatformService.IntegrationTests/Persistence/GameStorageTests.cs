@@ -59,7 +59,7 @@ public sealed class GameStorageTests(PlatformApiFactory factory) : IClassFixture
     }
 
     [Fact]
-    public async Task RecordAsync_WithTheSameEventAgain_StoresTheGameOnce()
+    public async Task RecordAsync_WithTheSameGameOrEventAgain_StoresTheGameOnce()
     {
         var command = NewGame(User(Guid.CreateVersion7()), Bot, _end);
         await RecordAsync(factory, command);

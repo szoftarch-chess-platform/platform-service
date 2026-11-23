@@ -6,8 +6,11 @@ namespace PlatformService.Infrastructure.Persistence;
 
 internal sealed class GameRepository(PlatformDbContext dbContext) : IGameRepository
 {
-    public void Add(Game game, Guid eventId) =>
-        dbContext.Games.Add(game).Property<Guid>(GameConfiguration.EventIdProperty).CurrentValue = eventId;
+    public void Add(Game game, Guid eventId)
+    {
+        var entry = dbContext.Games.Add(game);
+        entry.Property<Guid>(GameConfiguration.EventIdProperty).CurrentValue = eventId;
+    }
 
     public Task<bool> IsRecordedAsync(Guid gameId, Guid eventId, CancellationToken cancellationToken) =>
         dbContext.Games.AnyAsync(

@@ -40,17 +40,7 @@ internal sealed class GameHistoryService(
             throw new NotFoundException(GameNotFound);
         }
 
-        return new GameDetailsDto(
-            Id: game.Id,
-            Variant: game.Variant,
-            White: ToDto(game.White),
-            Black: ToDto(game.Black),
-            Result: game.Result,
-            Reason: game.Reason,
-            StartedAt: game.StartedAt,
-            EndedAt: game.EndedAt,
-            TimeControl: new TimeControlDto(game.TimeControl.InitialMs),
-            Moves: game.Moves);
+        return ToDetails(game);
     }
 
     private static GameSummaryDto ToSummary(Game game) => new(
@@ -62,6 +52,18 @@ internal sealed class GameHistoryService(
         Reason: game.Reason,
         StartedAt: game.StartedAt,
         EndedAt: game.EndedAt);
+
+    private static GameDetailsDto ToDetails(Game game) => new(
+        Id: game.Id,
+        Variant: game.Variant,
+        White: ToDto(game.White),
+        Black: ToDto(game.Black),
+        Result: game.Result,
+        Reason: game.Reason,
+        StartedAt: game.StartedAt,
+        EndedAt: game.EndedAt,
+        TimeControl: new TimeControlDto(game.TimeControl.InitialMs),
+        Moves: game.Moves);
 
     private static PlayerDto ToDto(Player player) => new(player.Kind, player.UserId, player.Name);
 }
