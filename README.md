@@ -10,7 +10,7 @@ ASP.NET Core service of the online chess platform. Its responsibilities are deci
 
 ## Configuration
 
-Settings come from `appsettings.json` and environment variables, where every `:` of a key becomes `__`. Locally the secrets go into `dotnet user-secrets`.
+Settings come from `appsettings.json` and environment variables, where every `:` of a key becomes `__`. Locally the secrets are user secrets of .NET, which `scripts/dev-setup.mjs` of the infra repo sets from [user-secrets.template.json](user-secrets.template.json).
 
 | Setting | Environment variable | Required | Description |
 |---|---|---|---|
@@ -28,12 +28,10 @@ The service uses the PostgreSQL and the RabbitMQ of the infra compose. Start the
 docker compose up -d --wait postgres rabbitmq
 ```
 
-Set the connection strings once with the passwords `PLATFORM_DB_PASSWORD` and `PLATFORM_RABBITMQ_PASSWORD` of the `.env` of the infra repo, and the absolute path of the signing key in the `secrets` folder of the infra repo. Apply the migrations as the Migrations section describes, then run the service on http://localhost:8080.
+Run the setup script of the infra repo, which sets the connection strings and the path of the signing key as user secrets with the passwords of the `.env` of the infra repo. It sets them again at every run, so run it again after a pull that changes `user-secrets.template.json`. Apply the migrations as the Migrations section describes, then run the service on http://localhost:8080.
 
 ```bash
-dotnet user-secrets set "ConnectionStrings:Platform" "Host=localhost;Port=5432;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>" --project src/PlatformService.Api
-dotnet user-secrets set "ConnectionStrings:RabbitMq" "amqp://platform-service:<PLATFORM_RABBITMQ_PASSWORD>@localhost:5672/%2f" --project src/PlatformService.Api
-dotnet user-secrets set "Jwt:SigningKeyPath" "<infra folder>/secrets/jwt/private-key.pem" --project src/PlatformService.Api
+node ../infra/scripts/dev-setup.mjs
 dotnet run --project src/PlatformService.Api
 ```
 
@@ -66,7 +64,7 @@ dotnet tool restore
 Apply the migrations to the PostgreSQL of the infra compose.
 
 ```bash
-dotnet ef database update --project src/PlatformService.Infrastructure --connection "Host=localhost;Port=5432;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>"
+dotnet ef database update --project src/PlatformService.Infrastructure --connection "Host=localhost;Port=5432;Database=platform;Username=platform;Password=<POSTGRES_PLATFORM_PASSWORD>"
 ```
 
 Add a migration after a change of the model.
@@ -99,8 +97,8 @@ docker buildx build --platform linux/amd64,linux/arm64 -t platform-service .
 docker run --rm --name platform-service --network chess-platform_postgres -p 127.0.0.1:8081:8080 \
   --mount type=bind,source=<infra folder>/secrets/jwt/private-key.pem,target=/run/secrets/jwt-signing-key.pem,readonly \
   -e Jwt__SigningKeyPath=/run/secrets/jwt-signing-key.pem \
-  -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" \
-  -e "ConnectionStrings__RabbitMq=amqp://platform-service:<PLATFORM_RABBITMQ_PASSWORD>@rabbitmq:5672/%2f" \
+  -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<POSTGRES_PLATFORM_PASSWORD>;GSS Encryption Mode=Disable" \
+  -e "ConnectionStrings__RabbitMq=amqp://platform-service:<RABBITMQ_PLATFORM_PASSWORD>@rabbitmq:5672/%2f" \
   platform-service
 curl -i http://localhost:8081/health/live
 
@@ -108,7 +106,7 @@ curl -i http://localhost:8081/health/live
 docker exec platform-service ./health-probe/PlatformService.HealthProbe http://127.0.0.1:8080/health/ready
 
 # Apply the migrations with the bundle of the image
-docker run --rm --network chess-platform_postgres --entrypoint ./efbundle -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" platform-service
+docker run --rm --network chess-platform_postgres --entrypoint ./efbundle -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<POSTGRES_PLATFORM_PASSWORD>;GSS Encryption Mode=Disable" platform-service
 ```
 
 [PS-ADR-9](docs/adr/container-image.md) describes the image, its health probe and the `GSS Encryption Mode=Disable` part of the connection string.
@@ -137,6 +135,7 @@ platform-service/
 ├── Directory.Build.props        # build settings of every project
 ├── Directory.Packages.props     # versions of every package
 ├── dotnet-tools.json            # local tools, such as dotnet-ef
+├── user-secrets.template.json   # template of the user secrets, which the infra setup script fills
 ├── .editorconfig, .gitignore, .dockerignore
 ├── Dockerfile                   # container image
 ├── .github/workflows/           # CI workflow
