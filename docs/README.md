@@ -22,6 +22,7 @@
 
 ## Open questions
 
+- The open question of [PS-ADR-8](adr/configuration-and-logging.md) on the log levels outside Development.
 - The open question of [PS-ADR-11](adr/accounts.md) on the NFC normalization of the passwords.
 - The RabbitMQ client. It has to read the envelope of ADR-6 as plain JSON and acknowledge only after the commit.
 - How the finished games are stored, for example with the moves in a JSONB column (ADR-5), and whether the service keeps more than the last 100 games of a user (NF-3).
