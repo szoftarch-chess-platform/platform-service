@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace PlatformService.HealthProbe;
 
 /// <summary>
@@ -8,7 +10,7 @@ internal static class Probe
     /// <summary>The exit code that Docker takes as healthy.</summary>
     public const int Healthy = 0;
 
-    /// <summary>The exit code that Docker takes as unhealthy. Docker reserves every other code.</summary>
+    /// <summary>The exit code that Docker takes as unhealthy. Docker defines no other code and reserves 2.</summary>
     public const int Unhealthy = 1;
 
     /// <summary>
@@ -16,6 +18,22 @@ internal static class Probe
     /// why it failed, which Docker keeps with the result of the check.
     /// </summary>
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(4);
+
+    /// <summary>Reads the URL of the health endpoint from the arguments, which have to be one http or https URL.</summary>
+    /// <remarks>On Linux an absolute path such as /health/ready is a file URI too, which HttpClient cannot send.</remarks>
+    public static bool TryGetUrl(string[] args, [NotNullWhen(true)] out Uri? url)
+    {
+        if (args.Length == 1
+            && Uri.TryCreate(args[0], UriKind.Absolute, out var parsed)
+            && (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps))
+        {
+            url = parsed;
+            return true;
+        }
+
+        url = null;
+        return false;
+    }
 
     /// <summary>
     /// Returns <see cref="Healthy"/> when <paramref name="url"/> answers with a success status code, and

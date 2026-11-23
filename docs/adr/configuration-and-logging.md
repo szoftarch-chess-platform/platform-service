@@ -14,7 +14,7 @@
 - With the same port on the host and in the container the Envoy configuration of the infra repo needs no port for each setup, as ADR-6 decides. The compose of the infra repo publishes no port 8080.
 - The logging guidance of ASP.NET Core says that the levels Trace, Debug and Information produce a high volume of messages in production, and it advises to limit them to specific categories. EF Core logs every command at `Information`, which is one or more lines for each request, while the own messages of the service, such as the security events of PS-ADR-12 and the finished games of PS-ADR-14, are few.
 - In Development the text of the commands helps to see what EF Core sends to the database.
-- The base class of `GatewayAuthenticationHandler` of PS-ADR-4 logs every challenge at `Information`, because its category is outside `Microsoft.AspNetCore`. This stays, because the gateway lets a request without a token through only under `/api/auth`, where every endpoint allows anonymous access, so only a path that does not exist gets a challenge.
+- The base class of `GatewayAuthenticationHandler` of PS-ADR-4 logs every challenge at `Information`, because its category is outside `Microsoft.AspNetCore`. This stays, because the gateway lets a request without a token through only under `/api/auth`, where every endpoint allows anonymous access, so only a request that no endpoint serves, such as one with a wrong path or a wrong method, gets a challenge.
 
 ## Sources
 

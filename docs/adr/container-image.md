@@ -4,20 +4,20 @@
 
 ## Context
 
-The service runs as a container image, which has to work on amd64 and arm64 machines. The compose of the infra repo starts the gateway only once the services behind it are ready, and it learns this from the health check of each container (ADR-2).
+The service runs as a container image, which has to work on amd64 and arm64 machines. The compose of the infra repo (ADR-2) starts the gateway only once the services behind it are ready, and it learns this from the health check of each container.
 
 ## Decision
 
 - The multi-stage `Dockerfile` builds with `sdk:10.0` using `--platform=$BUILDPLATFORM` and `-a $TARGETARCH`, so the build needs no emulation. It restores in a separate layer from the csproj and `Directory.*.props` files.
 - The runtime image is `aspnet:10.0-noble-chiseled`. It runs as a non-root user through `$APP_UID` and listens on port 8080 through `ASPNETCORE_HTTP_PORTS`.
-- The image contains the health probe `PlatformService.HealthProbe` in the folder `health-probe`. It is a console app that asks the URL of its only argument with a timeout of 4 seconds. It exits with 0 for a success status code and with 1 for any other answer or for no answer, as Docker expects, and it writes the reason of a failure to stderr. It references no project and no package.
+- The image contains the health probe `PlatformService.HealthProbe` in the folder `health-probe`. It is a console app that asks the URL of its only argument with a timeout of 4 seconds. It exits with 0 for a success status code, and with 1 for any other answer, for no answer and for an argument that is not an http URL, as Docker expects. It writes the reason of a failure to stderr. It references no project and no package.
 - The compose of the infra repo runs the probe with `http://127.0.0.1:8080/health/ready` as the health check of the container, so the gateway starts once the service reaches its database (PS-ADR-2). The `Dockerfile` has no `HEALTHCHECK`, like the images of the other services.
 - In the image, add `GSS Encryption Mode=Disable` to the connection string. The image has no Kerberos library. Npgsql tries GSS encryption by default and then writes the harmless error `Cannot load library libgssapi_krb5.so.2` to stderr, which this setting removes.
 
 ## Rationale
 
 - The chiseled image has no shell, curl or wget, so a health check can only start a program of the image directly. The .NET team discusses this gap in issue 4300 of dotnet/dotnet-docker. The images ship no tool for it, and the issue describes the pattern of a small .NET program that sends the request, which a team builds itself. A maintainer calls it a need of Docker Compose, because Kubernetes sends its probes from outside the container.
-- The SDK that builds the service also builds the probe for the same architecture, and the probe runs on the .NET runtime of the image. So the image gets no other toolchain and no downloaded binary, and the probe adds only a few kilobytes.
+- The SDK that builds the service also builds the probe for the same architecture, and the probe runs on the .NET runtime of the image. So the image gets no other toolchain and no downloaded binary, and the probe adds about 100 kilobytes, most of it the executable host of .NET.
 - A check starts a .NET process that ends after one request, which takes about a quarter of a second in compose.
 - The readiness endpoint checks the database and not the broker (PS-ADR-14), so the gateway waits for what the API needs.
 - Docker keeps the output of the last checks, which `docker inspect` shows, so the reason of a failure is visible without the logs of the service.

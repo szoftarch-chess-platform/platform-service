@@ -8,6 +8,27 @@ public sealed class ProbeTests
     private static readonly Uri _url = new("http://127.0.0.1:8080/health/ready");
 
     [Fact]
+    public void TryGetUrl_WithOneHttpUrl_ReturnsIt()
+    {
+        Assert.True(Probe.TryGetUrl([_url.OriginalString], out var url));
+        Assert.Equal(_url, url);
+    }
+
+    [Theory]
+    [InlineData("health/ready")]
+    [InlineData("/health/ready")]
+    [InlineData("ftp://127.0.0.1/health/ready")]
+    public void TryGetUrl_WithAnArgumentThatIsNotAnHttpUrl_ReturnsFalse(string argument) =>
+        Assert.False(Probe.TryGetUrl([argument], out _));
+
+    [Fact]
+    public void TryGetUrl_WithoutExactlyOneArgument_ReturnsFalse()
+    {
+        Assert.False(Probe.TryGetUrl([], out _));
+        Assert.False(Probe.TryGetUrl([_url.OriginalString, _url.OriginalString], out _));
+    }
+
+    [Fact]
     public async Task CheckAsync_IsHealthyForASuccessStatusCode()
     {
         var error = new StringWriter();
