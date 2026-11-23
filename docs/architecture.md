@@ -4,21 +4,23 @@ The diagrams of the service at the component level of the C4 model.
 
 ## Layers
 
-The arrows are project references, so the compiler checks the dependency rule of [PS-ADR-1](adr/clean-architecture.md).
+The arrows are project references, so the compiler checks the dependency rule of [PS-ADR-1](adr/clean-architecture.md). The dashed arrows are the connections to PostgreSQL of [PS-ADR-7](adr/persistence.md) and to RabbitMQ of [PS-ADR-14](adr/messaging.md).
 
 ```mermaid
 flowchart TD
     Api["<b>PlatformService.Api</b><br/>controllers, HTTP pipeline,<br/>composition root"]
     App["<b>PlatformService.Application</b><br/>use cases, DTOs, ports, validators"]
     Dom["<b>PlatformService.Domain</b><br/>entities, domain rules"]
-    Infra["<b>PlatformService.Infrastructure</b><br/>EF Core, Identity, access tokens,<br/>port implementations"]
+    Infra["<b>PlatformService.Infrastructure</b><br/>EF Core, Identity, access tokens,<br/>consumer of the finished games,<br/>port implementations"]
     Pg[("PostgreSQL")]
+    Mq[["RabbitMQ"]]
 
     Api --> App
     Api --> Infra
     Infra --> App
     App --> Dom
     Infra -.-> Pg
+    Infra -.-> Mq
 ```
 
 ## Middleware
