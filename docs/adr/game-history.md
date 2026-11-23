@@ -1,6 +1,6 @@
 # PS-ADR-13: Game history
 
-**Related:** F-6, NF-3, NF-4, NF-6, ADR-6, ADR-7, ADR-8, ADR-10, [PS-ADR-1](clean-architecture.md), [PS-ADR-2](http-api.md), [PS-ADR-5](error-handling.md), [PS-ADR-6](validation.md), [PS-ADR-7](persistence.md), [PS-ADR-8](configuration-and-logging.md), [PS-ADR-10](testing.md), [PS-ADR-12](tokens-and-sessions.md)
+**Related:** F-6, NF-3, NF-4, NF-6, ADR-6, ADR-7, ADR-8, ADR-10, [PS-ADR-1](clean-architecture.md), [PS-ADR-2](http-api.md), [PS-ADR-5](error-handling.md), [PS-ADR-6](validation.md), [PS-ADR-7](persistence.md), [PS-ADR-8](configuration-and-logging.md), [PS-ADR-10](testing.md), [PS-ADR-12](tokens-and-sessions.md), [PS-ADR-14](messaging.md)
 
 ## Context
 
@@ -15,7 +15,7 @@ The game-service hands every finished game over in the event `game.finished.v1` 
 - **Indexes:** `white_user_id` and `black_user_id` have an index each for the games of a user. EF Core 10 cannot index a property of a complex type, so the migration creates the two indexes with SQL, and they are not in the model.
 - **Event:** the table keeps the id of the event that reported the game with a unique index, so a repeated delivery is found by it, as ADR-6 decides. The id is a shadow property that the repository sets, so the Domain knows nothing about the messages.
 - **Every game stays:** the service deletes no game, so it keeps more than the 100 games of NF-3.
-- **Recording:** `IFinishedGameService.RecordAsync` stores a game with the id of its event, and the consumer of `game.finished.v1` calls it. Its validator checks the rules of the schema of the event, such as the UCI pattern of every move and the id of every player of the kind `user`. A game whose id or event is stored already is not stored again, and the outcome says so. If two deliveries of the same game pass this check at the same time, the primary key or the unique index refuses the second commit. `IUnitOfWork` reports this as `GameAlreadyRecordedException`, and the use case takes it as a game that is stored already.
+- **Recording:** `IFinishedGameService.RecordAsync` stores a game with the id of its event, and the consumer of `game.finished.v1` of PS-ADR-14 calls it. Its validator checks the rules of the schema of the event, such as the UCI pattern of every move and the id of every player of the kind `user`. A game whose id or event is stored already is not stored again, and the outcome says so. If two deliveries of the same game pass this check at the same time, the primary key or the unique index refuses the second commit. `IUnitOfWork` reports this as `GameAlreadyRecordedException`, and the use case takes it as a game that is stored already.
 - **List:** `GET /api/games` goes from `GamesController` to `IGameHistoryService.ListAsync`. `page` is 1 and `pageSize` is 20 by default, and the validator allows a page of at least 1 and a page size of 1 to 100, as the contract does. The games of the user are ordered by `ended_at` and then by the id, both descending, and OFFSET and LIMIT cut the page. `totalCount` counts every game of the user. The service compares the offset with the count as a long and does not query the games of a page after the last one, which is empty.
 - **One game:** `GET /api/games/{gameId}` goes to `IGameHistoryService.GetAsync`. The route has no constraint, so an id that is not a UUID fails the binding and gets the 400 of `ApiController`. A game that does not exist and a game that the user did not play both get 404 with the same `detail` (PS-ADR-5).
 - **Responses:** the summary, the details, the player and the time control have DTOs of their own, mapped by hand as PS-ADR-1 decides. The JSON of the bot has no `userId`, because a missing value is left out (PS-ADR-2). The timestamps end in `+00:00`, which ADR-8 allows.
@@ -57,7 +57,6 @@ The game-service hands every finished game over in the event `game.finished.v1` 
 - EF Core cannot bind complex types to the parameters of a constructor, so `Game` has a second private constructor for EF Core without the players and the time control.
 - The table grows by one row for every finished game.
 - The frontend gets a new value of an enum unchanged and has to show it (ADR-7).
-- To do: the consumer of `game.finished.v1` maps the event to `RecordFinishedGameCommand` and calls `RecordAsync`.
 
 ## Sources
 

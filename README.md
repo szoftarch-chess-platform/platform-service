@@ -15,25 +15,29 @@ Settings come from `appsettings.json` and environment variables, where every `:`
 | Setting | Environment variable | Required | Description |
 |---|---|---|---|
 | `ConnectionStrings:Platform` | `ConnectionStrings__Platform` | yes | Npgsql connection string of the database of the service |
+| `ConnectionStrings:RabbitMq` | `ConnectionStrings__RabbitMq` | yes | AMQP URI of RabbitMQ with the user `platform-service`, ending in `/%2f` for the default virtual host |
 | `Jwt:SigningKeyPath` | `Jwt__SigningKeyPath` | yes | Path of the PEM file with the private key that signs the access tokens. The `dev-setup.mjs` script of the infra repo creates it as `secrets/jwt/private-key.pem`. |
 | `ForwardedHeaders:KnownNetworks` | `ForwardedHeaders__KnownNetworks__0`, `__1` and so on | yes, set in `appsettings.json` | CIDR ranges that may send `X-Forwarded-For` and `X-Forwarded-Proto`. Environment variables override the entries of `appsettings.json` by index, and entries with a higher index stay. |
 | `ASPNETCORE_ENVIRONMENT` | | no | `Development` turns on the development features that PS-ADR-2, PS-ADR-5 and PS-ADR-8 describe |
 
 ## Running locally
 
-The service uses the PostgreSQL of the infra compose. Start it in the infra folder.
+The service uses the PostgreSQL and the RabbitMQ of the infra compose. Start them in the infra folder.
 
 ```bash
-docker compose up -d --wait postgres
+docker compose up -d --wait postgres rabbitmq
 ```
 
-Set the connection string once with the password `PLATFORM_DB_PASSWORD` of the `.env` of the infra repo, and the absolute path of the signing key in the `secrets` folder of the infra repo. Apply the migrations as the Migrations section describes, then run the service on http://localhost:8080.
+Set the connection strings once with the passwords `PLATFORM_DB_PASSWORD` and `PLATFORM_RABBITMQ_PASSWORD` of the `.env` of the infra repo, and the absolute path of the signing key in the `secrets` folder of the infra repo. Apply the migrations as the Migrations section describes, then run the service on http://localhost:8080.
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:Platform" "Host=localhost;Port=5432;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>" --project src/PlatformService.Api
+dotnet user-secrets set "ConnectionStrings:RabbitMq" "amqp://platform-service:<PLATFORM_RABBITMQ_PASSWORD>@localhost:5672/%2f" --project src/PlatformService.Api
 dotnet user-secrets set "Jwt:SigningKeyPath" "<infra folder>/secrets/jwt/private-key.pem" --project src/PlatformService.Api
 dotnet run --project src/PlatformService.Api
 ```
+
+The service consumes the finished games from the queue `platform.game-finished`, as [PS-ADR-14](docs/adr/messaging.md) describes. Until the game-service has started once, it waits for the exchange `game.events`. The README of the infra repo describes how to send a test event with `rabbitmqadmin`. While RabbitMQ is down, the service logs a warning every 5 seconds and serves the API.
 
 On Linux add `--urls "http://localhost:8080;http://172.17.0.1:8080"` to `dotnet run` when the gateway has to reach the service, with the address of the Docker bridge that the README of the infra repo describes.
 
@@ -79,7 +83,7 @@ The infra compose applies the migrations itself in the `platform-migrations` con
 dotnet test
 ```
 
-The integration tests start PostgreSQL in a container with Testcontainers, so Docker has to run. The unit tests need nothing else. The Test Explorer of Visual Studio finds both.
+The integration tests start PostgreSQL and RabbitMQ in containers with Testcontainers, so Docker has to run. The unit tests need nothing else. The Test Explorer of Visual Studio finds both.
 
 ## Docker
 
@@ -90,11 +94,13 @@ docker build -t platform-service .
 # Image for both amd64 and arm64
 docker buildx build --platform linux/amd64,linux/arm64 -t platform-service .
 
-# Run it on the database network of the infra compose, next to its PostgreSQL, with the signing key of the infra repo
+# Run it on the database network of the infra compose, next to its PostgreSQL, with the signing key of the infra repo.
+# RabbitMQ is on another network, so the consumer keeps trying to connect while the API works.
 docker run --rm --network chess-platform_postgres -p 127.0.0.1:8081:8080 \
   --mount type=bind,source=<infra folder>/secrets/jwt/private-key.pem,target=/run/secrets/jwt-signing-key.pem,readonly \
   -e Jwt__SigningKeyPath=/run/secrets/jwt-signing-key.pem \
   -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" \
+  -e "ConnectionStrings__RabbitMq=amqp://platform-service:<PLATFORM_RABBITMQ_PASSWORD>@rabbitmq:5672/%2f" \
   platform-service
 curl -i http://localhost:8081/health/live
 
@@ -149,16 +155,17 @@ platform-service/
 │   ├── PlatformService.Domain/               # entities and domain rules
 │   │   ├── Games/                            # finished games with their players
 │   │   └── Sessions/                         # sessions and their refresh tokens
-│   └── PlatformService.Infrastructure/       # EF Core, Identity, the access tokens and the port implementations
+│   └── PlatformService.Infrastructure/       # EF Core, Identity, the access tokens, the consumer of RabbitMQ and the port implementations
 │       ├── DependencyInjection.cs            # AddInfrastructure
 │       ├── HealthCheckTags.cs                # tags of the health checks
 │       ├── Identity/                         # user type, store and accounts of Identity
+│       ├── Messaging/                        # consumer of the finished games with its topology, its message and its options
 │       ├── Persistence/                      # DbContext, Unit of Work, repositories, entity configurations, their options and the cleanup of the expired sessions
 │       │   └── Migrations/                   # EF Core migrations
 │       └── Tokens/                           # signing of the access tokens and its key
 └── tests/
     ├── PlatformService.UnitTests/            # tests of the Domain and the Application logic
-    └── PlatformService.IntegrationTests/     # tests of the whole app in memory against PostgreSQL
+    └── PlatformService.IntegrationTests/     # tests of the whole app in memory against PostgreSQL and RabbitMQ
 ```
 
 ## Documentation

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using PlatformService.Application.Abstractions;
 using PlatformService.Application.Auth;
 using PlatformService.Infrastructure.Identity;
+using PlatformService.Infrastructure.Messaging;
 using PlatformService.Infrastructure.Persistence;
 using PlatformService.Infrastructure.Tokens;
 
@@ -14,7 +15,8 @@ public static class DependencyInjection
 {
     /// <summary>
     /// Registers the PostgreSQL database through EF Core, its readiness health check, the accounts of Identity,
-    /// the sessions with the cleanup of the expired ones, the finished games and the signing of the access tokens.
+    /// the sessions with the cleanup of the expired ones, the finished games with their consumer of RabbitMQ and the
+    /// signing of the access tokens.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
@@ -52,8 +54,34 @@ public static class DependencyInjection
         services.AddScoped<IUserAccounts, IdentityUserAccounts>();
 
         AddAccessTokens(services, configuration);
+        AddGameFinishedConsumer(services, configuration);
 
         return services;
+    }
+
+    /// <summary>
+    /// The consumer of <c>game.finished.v1</c> with the connection of <c>ConnectionStrings:RabbitMq</c> (PS-ADR-14).
+    /// The readiness check does not include the broker.
+    /// </summary>
+    private static void AddGameFinishedConsumer(IServiceCollection services, IConfiguration configuration)
+    {
+        // Read lazily and validated at startup, like the database settings above.
+        const string setting = $"ConnectionStrings:{RabbitMqOptions.ConnectionStringName}";
+        services.AddOptions<RabbitMqOptions>()
+            .Configure(options => options.ConnectionString =
+                configuration.GetConnectionString(RabbitMqOptions.ConnectionStringName) ?? string.Empty)
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.ConnectionString),
+                $"The connection string '{setting}' is not set. Set it with the "
+                + $"ConnectionStrings__{RabbitMqOptions.ConnectionStringName} environment variable "
+                + "or locally with dotnet user-secrets.")
+            .Validate(
+                options => string.IsNullOrWhiteSpace(options.ConnectionString) || RabbitMqOptions.IsAmqpUri(options.ConnectionString),
+                $"The connection string '{setting}' has to be an AMQP URI, such as amqp://user:password@host:5672/%2f.")
+            .ValidateOnStart();
+
+        services.AddSingleton<GameFinishedHandler>();
+        services.AddHostedService<GameFinishedConsumer>();
     }
 
     /// <summary>The signing of the access tokens with the key of <c>Jwt:SigningKeyPath</c> (PS-ADR-12).</summary>
