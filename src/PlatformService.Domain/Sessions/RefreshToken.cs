@@ -22,9 +22,16 @@ public sealed class RefreshToken
 
     public DateTimeOffset ExpiresAt { get; }
 
+    /// <summary>When a refresh replaced the token with a new one, or <see langword="null"/> while it is the newest.</summary>
+    public DateTimeOffset? ReplacedAt { get; private set; }
+
     internal static RefreshToken Issue(byte[] tokenHash, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(tokenHash);
         return new RefreshToken(Guid.CreateVersion7(now), tokenHash, now, now + Lifetime);
     }
+
+    internal bool IsExpiredAt(DateTimeOffset now) => ExpiresAt <= now;
+
+    internal void Replace(DateTimeOffset now) => ReplacedAt = now;
 }

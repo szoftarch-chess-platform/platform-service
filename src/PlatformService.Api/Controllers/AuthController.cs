@@ -21,7 +21,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     public async Task<ActionResult<CurrentUserDto>> Register(RegisterRequest request, CancellationToken cancellationToken)
     {
         var result = await authService.RegisterAsync(request, cancellationToken);
-        TokenCookies.Append(Response, result);
+        TokenCookies.Append(Response, result.AccessToken, result.RefreshToken);
         return StatusCode(StatusCodes.Status201Created, result.User);
     }
 
@@ -33,7 +33,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     public async Task<ActionResult<CurrentUserDto>> Login(LoginRequest request, CancellationToken cancellationToken)
     {
         var result = await authService.LoginAsync(request, cancellationToken);
-        TokenCookies.Append(Response, result);
+        TokenCookies.Append(Response, result.AccessToken, result.RefreshToken);
         return result.User;
     }
 }

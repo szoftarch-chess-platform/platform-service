@@ -19,6 +19,7 @@ internal sealed class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.HasKey(session => session.Id);
         builder.Property(session => session.Id).ValueGeneratedNever();
         builder.Property(session => session.StartedAt);
+        builder.Property(session => session.RevokedAt);
 
         builder.HasOne<PlatformUser>()
             .WithMany()

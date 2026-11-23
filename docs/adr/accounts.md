@@ -9,7 +9,7 @@ ADR-4 decides the tokens and the rules of the accounts, and NF-1 requires that t
 ## Decision
 
 - The accounts use ASP.NET Core Identity through `AddIdentityCore` and its EF Core stores in the database of the service. The package is `Microsoft.AspNetCore.Identity.EntityFrameworkCore` in the Infrastructure. The DbContext derives from `IdentityUserContext`, because the service has no roles.
-- The user type `PlatformUser` and `UserManager` stay in the Infrastructure. The Application reaches them through the `IUserAccounts` port, as PS-ADR-1 requires. The port creates an account and finds the account of a user name with its password, and it returns a `UserAccount` with the id and the user name. The Domain has no user.
+- The user type `PlatformUser` and `UserManager` stay in the Infrastructure. The Application reaches them through the `IUserAccounts` port, as PS-ADR-1 requires. The port creates an account, finds the account of a user name with its password and finds the account of an id for a refresh, and it returns a `UserAccount` with the id and the user name. The Domain has no user.
 - The key of the user type is a `Guid`, which holds the UUID v7 of ADR-4.
 - The store of Identity does not save on its own, so a new user goes into the database in the one commit of the use case, together with its session (PS-ADR-7, PS-ADR-12).
 - A taken user name or email address throws a `ConflictException` that names the taken fields, which becomes a 409 (PS-ADR-5). Identity finds it before the commit, and the unique indexes find it at the commit when two registrations run at the same time.

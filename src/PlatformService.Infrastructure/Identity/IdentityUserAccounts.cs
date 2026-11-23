@@ -36,6 +36,12 @@ internal sealed class IdentityUserAccounts(UserManager<PlatformUser> userManager
         return new UserAccount(user.Id, user.UserName!);
     }
 
+    public async Task<UserAccount?> FindByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(id.ToString());
+        return user is null ? null : new UserAccount(user.Id, user.UserName!);
+    }
+
     /// <summary>
     /// The validators of PS-ADR-6 check every other rule first, so Identity refuses an account only because of a
     /// taken user name or email address. Any other error means that the two sets of rules differ.

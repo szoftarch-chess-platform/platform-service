@@ -14,4 +14,8 @@ public interface IUserAccounts
     /// <summary>Finds the account of the user name regardless of case, if the password is right.</summary>
     /// <returns>The account, or <see langword="null"/> if the user name is unknown or the password is wrong.</returns>
     Task<UserAccount?> FindByCredentialsAsync(string userName, string password, CancellationToken cancellationToken);
+
+    /// <summary>Finds the account with the id, for example the user of a session.</summary>
+    /// <returns>The account, or <see langword="null"/> if there is none.</returns>
+    Task<UserAccount?> FindByIdAsync(Guid id, CancellationToken cancellationToken);
 }

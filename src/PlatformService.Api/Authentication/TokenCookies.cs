@@ -1,5 +1,4 @@
 using PlatformService.Application.Abstractions;
-using PlatformService.Application.Auth;
 
 namespace PlatformService.Api.Authentication;
 
@@ -18,19 +17,34 @@ internal static class TokenCookies
     public const string RefreshTokenPath = "/api/auth";
 
     /// <summary>Sets both cookies, each with the lifetime of its token as Max-Age.</summary>
-    public static void Append(HttpResponse response, SignInResult result)
+    public static void Append(HttpResponse response, IssuedToken accessToken, IssuedToken refreshToken)
     {
-        Append(response, AccessTokenName, result.AccessToken, AccessTokenPath);
-        Append(response, RefreshTokenName, result.RefreshToken, RefreshTokenPath);
+        Append(response, AccessTokenName, accessToken, AccessTokenPath);
+        Append(response, RefreshTokenName, refreshToken, RefreshTokenPath);
     }
 
-    private static void Append(HttpResponse response, string name, IssuedToken token, string path) =>
-        response.Cookies.Append(name, token.Value, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Path = path,
-            MaxAge = token.Lifetime,
-        });
+    /// <summary>
+    /// Deletes both cookies with an expiry in the past. The browser drops the deletion of a cookie whose Path differs,
+    /// and of a prefixed cookie without Secure, so it gets the attributes that the cookie was set with.
+    /// </summary>
+    public static void Delete(HttpResponse response)
+    {
+        response.Cookies.Delete(AccessTokenName, CreateOptions(AccessTokenPath));
+        response.Cookies.Delete(RefreshTokenName, CreateOptions(RefreshTokenPath));
+    }
+
+    private static void Append(HttpResponse response, string name, IssuedToken token, string path)
+    {
+        var options = CreateOptions(path);
+        options.MaxAge = token.Lifetime;
+        response.Cookies.Append(name, token.Value, options);
+    }
+
+    private static CookieOptions CreateOptions(string path) => new()
+    {
+        HttpOnly = true,
+        Secure = true,
+        SameSite = SameSiteMode.Strict,
+        Path = path,
+    };
 }

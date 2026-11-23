@@ -93,3 +93,45 @@ sequenceDiagram
     Svc-->>Ctrl: user and tokens
     Ctrl-->>Envoy: 201 with the two cookies
 ```
+
+## Refresh
+
+How `POST /api/auth/refresh` of [PS-ADR-2](adr/http-api.md) applies the rotation, the grace window and the reuse detection of [PS-ADR-12](adr/tokens-and-sessions.md), and how the concurrency token of [PS-ADR-7](adr/persistence.md) lets only one of two parallel refreshes replace the token. Logout takes the same path up to the session, revokes it and answers 204.
+
+```mermaid
+sequenceDiagram
+    participant Envoy
+    participant Ctrl as SessionsController
+    participant Svc as SessionService
+    participant Repo as ISessionRepository
+    participant Ses as Session
+    participant Acc as IUserAccounts
+    participant Tok as IAccessTokenIssuer
+    participant Uow as IUnitOfWork
+    participant Pg as PostgreSQL
+
+    Envoy->>Ctrl: POST /api/auth/refresh with the refresh cookie
+    Ctrl->>Svc: RefreshAsync
+    Svc->>Repo: FindByRefreshTokenAsync with the hash
+    Repo->>Pg: the session with this one token
+    Svc->>Ses: Refresh
+    alt not replaced yet, or replaced at most 10 seconds ago
+        Svc->>Acc: FindByIdAsync
+        Svc->>Tok: Issue
+        Svc->>Uow: SaveChangesAsync
+        Uow->>Pg: the replacement only where replaced_at is still null, and the new token
+        opt a parallel refresh replaced the token first
+            Uow-->>Svc: ConcurrencyConflictException
+            Svc->>Repo: FindByRefreshTokenAsync once more, which ends in the grace window
+        end
+        Svc-->>Ctrl: new tokens
+        Ctrl-->>Envoy: 204 with the two cookies
+    else replaced earlier
+        Svc->>Uow: SaveChangesAsync with the revoked session
+        Svc-->>Ctrl: session ended
+        Ctrl-->>Envoy: 401 that deletes the two cookies
+    else unknown, expired or revoked
+        Svc-->>Ctrl: session ended
+        Ctrl-->>Envoy: 401 that deletes the two cookies
+    end
+```

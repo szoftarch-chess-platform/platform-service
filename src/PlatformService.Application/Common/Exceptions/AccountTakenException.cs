@@ -6,19 +6,14 @@ namespace PlatformService.Application.Common.Exceptions;
 /// The user name or the email address of a registration is taken, regardless of case (PS-ADR-11).
 /// It names the taken fields, so the client can show the message next to them.
 /// </summary>
-public sealed class AccountTakenException : ConflictException
+public sealed class AccountTakenException(TakenAccountFields fields, Exception? innerException = null)
+    : ConflictException(CreateMessage(fields), CreateErrors(fields), innerException)
 {
     public const string UserNameTaken = "The user name is already taken.";
     public const string EmailTaken = "The email address is already taken.";
     public const string BothTaken = "The user name and the email address are already taken.";
 
-    public AccountTakenException(TakenAccountFields fields, Exception? innerException = null)
-        : base(CreateMessage(fields), CreateErrors(fields), innerException)
-    {
-        Fields = fields;
-    }
-
-    public TakenAccountFields Fields { get; }
+    public TakenAccountFields Fields { get; } = fields;
 
     private static string CreateMessage(TakenAccountFields fields) => fields switch
     {

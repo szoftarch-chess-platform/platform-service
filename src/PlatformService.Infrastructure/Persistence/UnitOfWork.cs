@@ -14,6 +14,12 @@ internal sealed class UnitOfWork(PlatformDbContext dbContext) : IUnitOfWork
         {
             await dbContext.SaveChangesAsync(cancellationToken);
         }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            // The loaded entities are out of date now, so the next query of the use case loads them again.
+            dbContext.ChangeTracker.Clear();
+            throw new ConcurrencyConflictException("A parallel request changed the same data first.", exception);
+        }
         catch (DbUpdateException exception) when (TakenAccountField(exception) is { } field)
         {
             throw new AccountTakenException(field, exception);

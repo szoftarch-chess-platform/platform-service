@@ -11,3 +11,7 @@
 ## Rationale
 
 - With the same port on the host and in the container the Envoy configuration of the infra repo needs no port for each setup, as ADR-6 decides. The compose of the infra repo publishes no port 8080.
+
+## Open questions
+
+- Which log levels the service writes outside Development. `appsettings.json` sets `Information` for every category except `Microsoft.AspNetCore`, so EF Core logs every SQL command with its text and duration but without the values of its parameters. The base class of `GatewayAuthenticationHandler` logs every challenge the same way, because the category of the handler is outside `Microsoft.AspNetCore`. With `Warning` for `Microsoft.EntityFrameworkCore.Database.Command` only the failed commands would be logged, as errors.
