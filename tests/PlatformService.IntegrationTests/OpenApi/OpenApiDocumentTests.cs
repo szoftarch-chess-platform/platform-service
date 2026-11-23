@@ -20,12 +20,15 @@ public sealed class OpenApiDocumentTests(PlatformApiFactory factory) : IClassFix
         Assert.Equal(0, security.GetArrayLength());
     }
 
-    [Fact]
-    public async Task OtherOperations_KeepTheIdentityHeadersOfTheDocument()
+    [Theory]
+    [InlineData("/api/users/me")]
+    [InlineData("/api/games")]
+    [InlineData("/api/games/{gameId}")]
+    public async Task OtherOperations_KeepTheIdentityHeadersOfTheDocument(string path)
     {
         var document = await ReadDocumentAsync();
 
-        var operation = document.GetProperty("paths").GetProperty("/api/users/me").GetProperty("get");
+        var operation = document.GetProperty("paths").GetProperty(path).GetProperty("get");
 
         Assert.False(operation.TryGetProperty("security", out _));
         Assert.Equal(1, document.GetProperty("security").GetArrayLength());

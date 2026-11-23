@@ -14,7 +14,7 @@ public static class DependencyInjection
 {
     /// <summary>
     /// Registers the PostgreSQL database through EF Core, its readiness health check, the accounts of Identity,
-    /// the sessions with the cleanup of the expired ones and the signing of the access tokens.
+    /// the sessions with the cleanup of the expired ones, the finished games and the signing of the access tokens.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddHostedService<ExpiredSessionCleanup>();
+        services.AddScoped<IGameRepository, GameRepository>();
 
         // Only the user management of Identity, without its cookies, tokens and endpoints. Its store does not save
         // on its own, so the user is saved in the commit of the use case (PS-ADR-11).

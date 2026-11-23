@@ -13,5 +13,8 @@ public interface IUnitOfWork
     /// <exception cref="ConcurrencyConflictException">
     /// A parallel request replaced the same refresh token first, so nothing was saved (PS-ADR-12).
     /// </exception>
+    /// <exception cref="GameAlreadyRecordedException">
+    /// A parallel delivery stored a game with the same id or from the same event first, so nothing was saved (PS-ADR-13).
+    /// </exception>
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }
