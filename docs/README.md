@@ -1,6 +1,6 @@
 # platform-service documentation
 
-- [Architecture](architecture.md): diagrams of the layers, of the request path, of registration and of the refresh
+- [Architecture](architecture.md): diagrams of the layers, of the request path, of registration, of the refresh, of the game history and of the finished games
 - System documentation: the `docs/` folder of the infra repo
 
 ## ADRs
@@ -24,5 +24,4 @@
 
 ## Open questions
 
-- The open question of [PS-ADR-8](adr/configuration-and-logging.md) on the log levels outside Development.
 - The open question of [PS-ADR-11](adr/accounts.md) on the NFC normalization of the passwords.

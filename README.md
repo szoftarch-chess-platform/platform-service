@@ -96,7 +96,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t platform-service .
 
 # Run it on the database network of the infra compose, next to its PostgreSQL, with the signing key of the infra repo.
 # RabbitMQ is on another network, so the consumer keeps trying to connect while the API works.
-docker run --rm --network chess-platform_postgres -p 127.0.0.1:8081:8080 \
+docker run --rm --name platform-service --network chess-platform_postgres -p 127.0.0.1:8081:8080 \
   --mount type=bind,source=<infra folder>/secrets/jwt/private-key.pem,target=/run/secrets/jwt-signing-key.pem,readonly \
   -e Jwt__SigningKeyPath=/run/secrets/jwt-signing-key.pem \
   -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" \
@@ -104,17 +104,24 @@ docker run --rm --network chess-platform_postgres -p 127.0.0.1:8081:8080 \
   platform-service
 curl -i http://localhost:8081/health/live
 
+# Check the readiness with the health probe of the image, as the health check of the infra compose does
+docker exec platform-service ./health-probe/PlatformService.HealthProbe http://127.0.0.1:8080/health/ready
+
 # Apply the migrations with the bundle of the image
 docker run --rm --network chess-platform_postgres --entrypoint ./efbundle -e "ConnectionStrings__Platform=Host=postgres;Database=platform;Username=platform;Password=<PLATFORM_DB_PASSWORD>;GSS Encryption Mode=Disable" platform-service
 ```
 
-[PS-ADR-9](docs/adr/container-image.md) describes the image and the `GSS Encryption Mode=Disable` part of the connection string.
+[PS-ADR-9](docs/adr/container-image.md) describes the image, its health probe and the `GSS Encryption Mode=Disable` part of the connection string.
 
 ## CI
 
 The workflow in `.github/workflows/platform-service.yml` restores, builds and tests every pull request and every push to `dev` and `main`, and it builds the image. For a tag such as `v1.0.0` it also publishes the image for amd64 and arm64 as `ghcr.io/szoftarch-chess-platform/platform-service:1.0.0`.
 
+Tag the version on `main` once the pull request from `dev` is merged.
+
 ```bash
+git switch main
+git pull
 git tag v1.0.0
 git push origin v1.0.0
 ```
@@ -144,6 +151,7 @@ platform-service/
 │   │   ├── ErrorHandling/                    # exceptions to ProblemDetails
 │   │   ├── OpenApi/                          # transformers of the OpenAPI document
 │   │   ├── appsettings.json
+│   │   ├── appsettings.Development.json      # log levels of Development
 │   │   └── Properties/launchSettings.json    # local launch profile
 │   ├── PlatformService.Application/          # use cases, DTOs, ports and validators
 │   │   ├── DependencyInjection.cs            # AddApplication
@@ -155,6 +163,7 @@ platform-service/
 │   ├── PlatformService.Domain/               # entities and domain rules
 │   │   ├── Games/                            # finished games with their players
 │   │   └── Sessions/                         # sessions and their refresh tokens
+│   ├── PlatformService.HealthProbe/          # health check of the container, outside the layers
 │   └── PlatformService.Infrastructure/       # EF Core, Identity, the access tokens, the consumer of RabbitMQ and the port implementations
 │       ├── DependencyInjection.cs            # AddInfrastructure
 │       ├── HealthCheckTags.cs                # tags of the health checks
@@ -164,7 +173,7 @@ platform-service/
 │       │   └── Migrations/                   # EF Core migrations
 │       └── Tokens/                           # signing of the access tokens and its key
 └── tests/
-    ├── PlatformService.UnitTests/            # tests of the Domain and the Application logic
+    ├── PlatformService.UnitTests/            # tests of the Domain, the Application logic and the health probe
     └── PlatformService.IntegrationTests/     # tests of the whole app in memory against PostgreSQL and RabbitMQ
 ```
 

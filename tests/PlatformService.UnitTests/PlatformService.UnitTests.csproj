@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PlatformService.Application\PlatformService.Application.csproj" />
+    <ProjectReference Include="..\..\src\PlatformService.HealthProbe\PlatformService.HealthProbe.csproj" />
   </ItemGroup>
 
   <ItemGroup>
