@@ -24,19 +24,33 @@ internal sealed class UnitOfWork(PlatformDbContext dbContext) : IUnitOfWork
         {
             throw new AccountTakenException(field, exception);
         }
+        catch (DbUpdateException exception) when (IsRecordedGame(exception))
+        {
+            // The game stays unsaved, so it is forgotten like the loaded entities after a conflict.
+            dbContext.ChangeTracker.Clear();
+            throw new GameAlreadyRecordedException("A parallel delivery stored the same game first.", exception);
+        }
     }
+
+    /// <summary>Two deliveries of the same game both pass the check of the use case, and the database refuses the second one.</summary>
+    private static bool IsRecordedGame(DbUpdateException exception) =>
+        ViolatedUniqueConstraint(exception) is GameConfiguration.PrimaryKey or GameConfiguration.EventIdIndex;
 
     /// <summary>
     /// Two registrations at the same time both pass the check of Identity, and the unique index refuses the second
     /// one. PostgreSQL reports only the first index that the row violates.
     /// </summary>
     private static TakenAccountFields? TakenAccountField(DbUpdateException exception) =>
+        ViolatedUniqueConstraint(exception) switch
+        {
+            PlatformUserConfiguration.UserNameIndex => TakenAccountFields.UserName,
+            PlatformUserConfiguration.EmailIndex => TakenAccountFields.Email,
+            _ => null,
+        };
+
+    /// <summary>The primary key or the unique index that the commit violated, or <see langword="null"/> for another failure.</summary>
+    private static string? ViolatedUniqueConstraint(DbUpdateException exception) =>
         exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgresException
-            ? postgresException.ConstraintName switch
-            {
-                PlatformUserConfiguration.UserNameIndex => TakenAccountFields.UserName,
-                PlatformUserConfiguration.EmailIndex => TakenAccountFields.Email,
-                _ => null,
-            }
+            ? postgresException.ConstraintName
             : null;
 }

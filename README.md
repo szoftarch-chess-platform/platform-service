@@ -144,8 +144,10 @@ platform-service/
 │   │   ├── Abstractions/                     # ports
 │   │   ├── Auth/                             # use cases of registration, sign-in, refresh and sign-out
 │   │   ├── Common/Exceptions/                # exceptions that become error responses
+│   │   ├── Games/                            # use cases of the game history and of recording the finished games
 │   │   └── Users/                            # use cases of the users
 │   ├── PlatformService.Domain/               # entities and domain rules
+│   │   ├── Games/                            # finished games with their players
 │   │   └── Sessions/                         # sessions and their refresh tokens
 │   └── PlatformService.Infrastructure/       # EF Core, Identity, the access tokens and the port implementations
 │       ├── DependencyInjection.cs            # AddInfrastructure

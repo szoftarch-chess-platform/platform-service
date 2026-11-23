@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PlatformService.Application.Auth;
+using PlatformService.Application.Games;
 using PlatformService.Application.Users;
 
 namespace PlatformService.Application;
@@ -25,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ISessionService, SessionService>();
+        services.AddScoped<IGameHistoryService, GameHistoryService>();
+        services.AddScoped<IFinishedGameService, FinishedGameService>();
 
         return services;
     }
