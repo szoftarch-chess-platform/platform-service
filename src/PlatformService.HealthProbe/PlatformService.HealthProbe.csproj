@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The health check of the container, because the chiseled image has no shell or curl (PS-ADR-9).
+    It is outside the layers of PS-ADR-1 and references no project and no package.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PlatformService.UnitTests" />
+  </ItemGroup>
+
+</Project>
